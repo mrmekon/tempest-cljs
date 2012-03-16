@@ -9612,26 +9612,31 @@ cljs.core.prefers = function(a) {
 };
 var tempest = {levels:{}};
 tempest.levels._STAR_default_line_length_STAR_ = 80;
+tempest.levels._STAR_default_length_fn_STAR_ = function(a) {
+  return 4 * a
+};
+tempest.levels.build_unlinked_segment_list = function(a) {
+  return cljs.core.vec.call(null, function(a, c) {
+    for(;;) {
+      if(cljs.core.truth_(cljs.core._EQ_.call(null, a, 0))) {
+        return c
+      }
+      var d = a - 1, e = cljs.core.cons.call(null, cljs.core.Vector.fromArray([a - 1, a]), c), a = d, c = e
+    }
+  }.call(null, a, cljs.core.Vector.fromArray([])))
+};
+tempest.levels.build_segment_list = function(a, b) {
+  var c = tempest.levels.build_unlinked_segment_list.call(null, a);
+  return cljs.core.truth_(!0 === b) ? cljs.core.conj.call(null, c, cljs.core.Vector.fromArray([cljs.core.last.call(null, cljs.core.last.call(null, c)), cljs.core.first.call(null, cljs.core.first.call(null, c))])) : c
+};
 tempest.levels._STAR_level1_lines_STAR_ = cljs.core.Vector.fromArray([cljs.core.Vector.fromArray([113, 225]), cljs.core.Vector.fromArray([99, 234]), cljs.core.Vector.fromArray([90, 243]), cljs.core.Vector.fromArray([84, 252]), cljs.core.Vector.fromArray([81, 261]), cljs.core.Vector.fromArray([tempest.levels._STAR_default_line_length_STAR_, 270]), cljs.core.Vector.fromArray([81, 279]), cljs.core.Vector.fromArray([84, 288]), cljs.core.Vector.fromArray([90, 297]), cljs.core.Vector.fromArray([99, 306]), 
 cljs.core.Vector.fromArray([113, 315])]);
-tempest.levels._STAR_level1_segments_STAR_ = cljs.core.Vector.fromArray([cljs.core.Vector.fromArray([0, 1]), cljs.core.Vector.fromArray([1, 2]), cljs.core.Vector.fromArray([2, 3]), cljs.core.Vector.fromArray([3, 4]), cljs.core.Vector.fromArray([4, 5]), cljs.core.Vector.fromArray([5, 6]), cljs.core.Vector.fromArray([6, 7]), cljs.core.Vector.fromArray([7, 8]), cljs.core.Vector.fromArray([8, 9]), cljs.core.Vector.fromArray([9, 10])]);
-tempest.levels._STAR_level1_STAR_ = cljs.core.ObjMap.fromObject(["\ufdd0'lines", "\ufdd0'segments", "\ufdd0'length-fn"], {"\ufdd0'lines":tempest.levels._STAR_level1_lines_STAR_, "\ufdd0'segments":tempest.levels._STAR_level1_segments_STAR_, "\ufdd0'length-fn":function(a) {
-  return 4 * a
-}});
 tempest.levels._STAR_level2_lines_STAR_ = cljs.core.Vector.fromArray([cljs.core.Vector.fromArray([tempest.levels._STAR_default_line_length_STAR_, 0]), cljs.core.Vector.fromArray([tempest.levels._STAR_default_line_length_STAR_, 18]), cljs.core.Vector.fromArray([tempest.levels._STAR_default_line_length_STAR_, 36]), cljs.core.Vector.fromArray([tempest.levels._STAR_default_line_length_STAR_, 54]), cljs.core.Vector.fromArray([tempest.levels._STAR_default_line_length_STAR_, 72]), cljs.core.Vector.fromArray([tempest.levels._STAR_default_line_length_STAR_, 
 90]), cljs.core.Vector.fromArray([tempest.levels._STAR_default_line_length_STAR_, 108]), cljs.core.Vector.fromArray([tempest.levels._STAR_default_line_length_STAR_, 126]), cljs.core.Vector.fromArray([tempest.levels._STAR_default_line_length_STAR_, 144]), cljs.core.Vector.fromArray([tempest.levels._STAR_default_line_length_STAR_, 162]), cljs.core.Vector.fromArray([tempest.levels._STAR_default_line_length_STAR_, 180]), cljs.core.Vector.fromArray([tempest.levels._STAR_default_line_length_STAR_, 198]), 
 cljs.core.Vector.fromArray([tempest.levels._STAR_default_line_length_STAR_, 216]), cljs.core.Vector.fromArray([tempest.levels._STAR_default_line_length_STAR_, 234]), cljs.core.Vector.fromArray([tempest.levels._STAR_default_line_length_STAR_, 252]), cljs.core.Vector.fromArray([tempest.levels._STAR_default_line_length_STAR_, 270]), cljs.core.Vector.fromArray([tempest.levels._STAR_default_line_length_STAR_, 288]), cljs.core.Vector.fromArray([tempest.levels._STAR_default_line_length_STAR_, 306]), cljs.core.Vector.fromArray([tempest.levels._STAR_default_line_length_STAR_, 
 324]), cljs.core.Vector.fromArray([tempest.levels._STAR_default_line_length_STAR_, 342])]);
-tempest.levels._STAR_level2_segments_STAR_ = cljs.core.Vector.fromArray([cljs.core.Vector.fromArray([0, 1]), cljs.core.Vector.fromArray([1, 2]), cljs.core.Vector.fromArray([2, 3]), cljs.core.Vector.fromArray([3, 4]), cljs.core.Vector.fromArray([4, 5]), cljs.core.Vector.fromArray([5, 6]), cljs.core.Vector.fromArray([6, 7]), cljs.core.Vector.fromArray([7, 8]), cljs.core.Vector.fromArray([8, 9]), cljs.core.Vector.fromArray([9, 10]), cljs.core.Vector.fromArray([10, 11]), cljs.core.Vector.fromArray([11, 
-12]), cljs.core.Vector.fromArray([12, 13]), cljs.core.Vector.fromArray([13, 14]), cljs.core.Vector.fromArray([14, 15]), cljs.core.Vector.fromArray([15, 16]), cljs.core.Vector.fromArray([16, 17]), cljs.core.Vector.fromArray([17, 18]), cljs.core.Vector.fromArray([18, 19]), cljs.core.Vector.fromArray([19, 0])]);
-tempest.levels._STAR_level2_STAR_ = cljs.core.ObjMap.fromObject(["\ufdd0'lines", "\ufdd0'segments", "\ufdd0'length-fn"], {"\ufdd0'lines":tempest.levels._STAR_level2_lines_STAR_, "\ufdd0'segments":tempest.levels._STAR_level2_segments_STAR_, "\ufdd0'length-fn":function(a) {
-  return 4 * a
-}});
-tempest.levels._STAR_levels_STAR_ = cljs.core.Vector.fromArray([cljs.core.ObjMap.fromObject(["\ufdd0'lines", "\ufdd0'segments", "\ufdd0'length-fn"], {"\ufdd0'lines":tempest.levels._STAR_level1_lines_STAR_, "\ufdd0'segments":tempest.levels._STAR_level1_segments_STAR_, "\ufdd0'length-fn":function(a) {
-  return 4 * a
-}}), cljs.core.ObjMap.fromObject(["\ufdd0'lines", "\ufdd0'segments", "\ufdd0'length-fn"], {"\ufdd0'lines":tempest.levels._STAR_level2_lines_STAR_, "\ufdd0'segments":tempest.levels._STAR_level2_segments_STAR_, "\ufdd0'length-fn":function(a) {
-  return 4 * a
-}})]);
+tempest.levels._STAR_levels_STAR_ = cljs.core.Vector.fromArray([cljs.core.ObjMap.fromObject(["\ufdd0'lines", "\ufdd0'segments", "\ufdd0'length-fn"], {"\ufdd0'lines":tempest.levels._STAR_level1_lines_STAR_, "\ufdd0'segments":tempest.levels.build_segment_list.call(null, cljs.core.count.call(null, tempest.levels._STAR_level1_lines_STAR_) - 1, !1), "\ufdd0'length-fn":tempest.levels._STAR_default_length_fn_STAR_}), cljs.core.ObjMap.fromObject(["\ufdd0'lines", "\ufdd0'segments", "\ufdd0'length-fn"], {"\ufdd0'lines":tempest.levels._STAR_level2_lines_STAR_, 
+"\ufdd0'segments":tempest.levels.build_segment_list.call(null, cljs.core.count.call(null, tempest.levels._STAR_level2_lines_STAR_) - 1, !0), "\ufdd0'length-fn":tempest.levels._STAR_default_length_fn_STAR_})]);
 tempest.polar_to_cartesian_coords = function() {
   return function(a, b) {
     switch(arguments.length) {

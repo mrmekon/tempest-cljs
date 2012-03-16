@@ -6,6 +6,22 @@
             [goog.math :as math]))
 
 (def *default-line-length* 80)
+(def *default-length-fn* #(* 4 %))
+
+(defn build-unlinked-segment-list [max-x]
+  (vec ((fn [x segments]
+    (if (= x 0)
+      segments
+      (recur (dec x) (cons [(dec x) x] segments)))
+    ) max-x [])))
+
+(defn build-segment-list [max-x linked?]
+  (let [segments (build-unlinked-segment-list max-x)]
+    (if (true? linked?)
+      (conj segments [(last (last segments)) (first (first segments))])
+      segments)
+    )
+  )
 
 ;; short radius, angle in degrees
 ;; straight lines: r = *default-line-length*/abs(cos(270-angle))
@@ -21,23 +37,7 @@
    [90 297]
    [99 306]
    [113 315]])
-(def *level1_segments*
-  [[0 1]
-   [1 2]
-   [2 3]
-   [3 4]
-   [4 5]
-   [5 6]
-   [6 7]
-   [7 8]
-   [8 9]
-   [9 10]
-   ])
-(def *level1* {:lines *level1_lines*
-   :segments *level1_segments*
-   :length-fn #(* % 4)})
 
-;; short radius, angle in degrees
 (def *level2_lines*
   [[*default-line-length* 0]
    [*default-line-length* 18]
@@ -60,34 +60,15 @@
    [*default-line-length* 324]
    [*default-line-length* 342]
    ])
-(def *level2_segments*
-  [[0 1]
-   [1 2]
-   [2 3]
-   [3 4]
-   [4 5]
-   [5 6]
-   [6 7]
-   [7 8]
-   [8 9]
-   [9 10]
-   [10 11]
-   [11 12]
-   [12 13]
-   [13 14]
-   [14 15]
-   [15 16]
-   [16 17]
-   [17 18]
-   [18 19]
-   [19 0]
-   ])
-(def *level2* {:lines *level2_lines*
-   :segments *level2_segments*
-   :length-fn #(* % 4)})
+
 
 (def *levels*
   [
-   {:lines *level1_lines* :segments *level1_segments* :length-fn #(* % 4)}
-   {:lines *level2_lines* :segments *level2_segments* :length-fn #(* % 4)}
+   {:lines *level1_lines*
+    :segments (build-segment-list (- (count *level1_lines*) 1) false)
+    :length-fn *default-length-fn*}
+   
+   {:lines *level2_lines*
+    :segments (build-segment-list (- (count *level2_lines*) 1) true)
+    :length-fn *default-length-fn*}
    ])

@@ -6,18 +6,36 @@ goog.require('goog.events');
 goog.require('goog.events.EventType');
 goog.require('goog.math');
 tempest.levels._STAR_default_line_length_STAR_ = 80;
+tempest.levels._STAR_default_length_fn_STAR_ = (function _STAR_default_length_fn_STAR_(p1__2735_SHARP_){
+return (4 * p1__2735_SHARP_);
+});
+tempest.levels.build_unlinked_segment_list = (function build_unlinked_segment_list(max_x){
+return cljs.core.vec.call(null,(function (x,segments){
+while(true){
+if(cljs.core.truth_(cljs.core._EQ_.call(null,x,0)))
+{return segments;
+} else
+{{
+var G__2736 = (x - 1);
+var G__2737 = cljs.core.cons.call(null,cljs.core.Vector.fromArray([(x - 1),x]),segments);
+x = G__2736;
+segments = G__2737;
+continue;
+}
+}
+break;
+}
+}).call(null,max_x,cljs.core.Vector.fromArray([])));
+});
+tempest.levels.build_segment_list = (function build_segment_list(max_x,linked_QMARK_){
+var segments__2738 = tempest.levels.build_unlinked_segment_list.call(null,max_x);
+
+if(cljs.core.truth_(linked_QMARK_ === true))
+{return cljs.core.conj.call(null,segments__2738,cljs.core.Vector.fromArray([cljs.core.last.call(null,cljs.core.last.call(null,segments__2738)),cljs.core.first.call(null,cljs.core.first.call(null,segments__2738))]));
+} else
+{return segments__2738;
+}
+});
 tempest.levels._STAR_level1_lines_STAR_ = cljs.core.Vector.fromArray([cljs.core.Vector.fromArray([113,225]),cljs.core.Vector.fromArray([99,234]),cljs.core.Vector.fromArray([90,243]),cljs.core.Vector.fromArray([84,252]),cljs.core.Vector.fromArray([81,261]),cljs.core.Vector.fromArray([tempest.levels._STAR_default_line_length_STAR_,270]),cljs.core.Vector.fromArray([81,279]),cljs.core.Vector.fromArray([84,288]),cljs.core.Vector.fromArray([90,297]),cljs.core.Vector.fromArray([99,306]),cljs.core.Vector.fromArray([113,315])]);
-tempest.levels._STAR_level1_segments_STAR_ = cljs.core.Vector.fromArray([cljs.core.Vector.fromArray([0,1]),cljs.core.Vector.fromArray([1,2]),cljs.core.Vector.fromArray([2,3]),cljs.core.Vector.fromArray([3,4]),cljs.core.Vector.fromArray([4,5]),cljs.core.Vector.fromArray([5,6]),cljs.core.Vector.fromArray([6,7]),cljs.core.Vector.fromArray([7,8]),cljs.core.Vector.fromArray([8,9]),cljs.core.Vector.fromArray([9,10])]);
-tempest.levels._STAR_level1_STAR_ = cljs.core.ObjMap.fromObject(["\uFDD0'lines","\uFDD0'segments","\uFDD0'length-fn"],{"\uFDD0'lines":tempest.levels._STAR_level1_lines_STAR_,"\uFDD0'segments":tempest.levels._STAR_level1_segments_STAR_,"\uFDD0'length-fn":(function _STAR_level1_STAR_(p1__2735_SHARP_){
-return (p1__2735_SHARP_ * 4);
-})});
 tempest.levels._STAR_level2_lines_STAR_ = cljs.core.Vector.fromArray([cljs.core.Vector.fromArray([tempest.levels._STAR_default_line_length_STAR_,0]),cljs.core.Vector.fromArray([tempest.levels._STAR_default_line_length_STAR_,18]),cljs.core.Vector.fromArray([tempest.levels._STAR_default_line_length_STAR_,36]),cljs.core.Vector.fromArray([tempest.levels._STAR_default_line_length_STAR_,54]),cljs.core.Vector.fromArray([tempest.levels._STAR_default_line_length_STAR_,72]),cljs.core.Vector.fromArray([tempest.levels._STAR_default_line_length_STAR_,90]),cljs.core.Vector.fromArray([tempest.levels._STAR_default_line_length_STAR_,108]),cljs.core.Vector.fromArray([tempest.levels._STAR_default_line_length_STAR_,126]),cljs.core.Vector.fromArray([tempest.levels._STAR_default_line_length_STAR_,144]),cljs.core.Vector.fromArray([tempest.levels._STAR_default_line_length_STAR_,162]),cljs.core.Vector.fromArray([tempest.levels._STAR_default_line_length_STAR_,180]),cljs.core.Vector.fromArray([tempest.levels._STAR_default_line_length_STAR_,198]),cljs.core.Vector.fromArray([tempest.levels._STAR_default_line_length_STAR_,216]),cljs.core.Vector.fromArray([tempest.levels._STAR_default_line_length_STAR_,234]),cljs.core.Vector.fromArray([tempest.levels._STAR_default_line_length_STAR_,252]),cljs.core.Vector.fromArray([tempest.levels._STAR_default_line_length_STAR_,270]),cljs.core.Vector.fromArray([tempest.levels._STAR_default_line_length_STAR_,288]),cljs.core.Vector.fromArray([tempest.levels._STAR_default_line_length_STAR_,306]),cljs.core.Vector.fromArray([tempest.levels._STAR_default_line_length_STAR_,324]),cljs.core.Vector.fromArray([tempest.levels._STAR_default_line_length_STAR_,342])]);
-tempest.levels._STAR_level2_segments_STAR_ = cljs.core.Vector.fromArray([cljs.core.Vector.fromArray([0,1]),cljs.core.Vector.fromArray([1,2]),cljs.core.Vector.fromArray([2,3]),cljs.core.Vector.fromArray([3,4]),cljs.core.Vector.fromArray([4,5]),cljs.core.Vector.fromArray([5,6]),cljs.core.Vector.fromArray([6,7]),cljs.core.Vector.fromArray([7,8]),cljs.core.Vector.fromArray([8,9]),cljs.core.Vector.fromArray([9,10]),cljs.core.Vector.fromArray([10,11]),cljs.core.Vector.fromArray([11,12]),cljs.core.Vector.fromArray([12,13]),cljs.core.Vector.fromArray([13,14]),cljs.core.Vector.fromArray([14,15]),cljs.core.Vector.fromArray([15,16]),cljs.core.Vector.fromArray([16,17]),cljs.core.Vector.fromArray([17,18]),cljs.core.Vector.fromArray([18,19]),cljs.core.Vector.fromArray([19,0])]);
-tempest.levels._STAR_level2_STAR_ = cljs.core.ObjMap.fromObject(["\uFDD0'lines","\uFDD0'segments","\uFDD0'length-fn"],{"\uFDD0'lines":tempest.levels._STAR_level2_lines_STAR_,"\uFDD0'segments":tempest.levels._STAR_level2_segments_STAR_,"\uFDD0'length-fn":(function _STAR_level2_STAR_(p1__2736_SHARP_){
-return (p1__2736_SHARP_ * 4);
-})});
-tempest.levels._STAR_levels_STAR_ = cljs.core.Vector.fromArray([cljs.core.ObjMap.fromObject(["\uFDD0'lines","\uFDD0'segments","\uFDD0'length-fn"],{"\uFDD0'lines":tempest.levels._STAR_level1_lines_STAR_,"\uFDD0'segments":tempest.levels._STAR_level1_segments_STAR_,"\uFDD0'length-fn":(function _STAR_levels_STAR_(p1__2737_SHARP_){
-return (p1__2737_SHARP_ * 4);
-})}),cljs.core.ObjMap.fromObject(["\uFDD0'lines","\uFDD0'segments","\uFDD0'length-fn"],{"\uFDD0'lines":tempest.levels._STAR_level2_lines_STAR_,"\uFDD0'segments":tempest.levels._STAR_level2_segments_STAR_,"\uFDD0'length-fn":(function _STAR_levels_STAR_(p1__2738_SHARP_){
-return (p1__2738_SHARP_ * 4);
-})})]);
+tempest.levels._STAR_levels_STAR_ = cljs.core.Vector.fromArray([cljs.core.ObjMap.fromObject(["\uFDD0'lines","\uFDD0'segments","\uFDD0'length-fn"],{"\uFDD0'lines":tempest.levels._STAR_level1_lines_STAR_,"\uFDD0'segments":tempest.levels.build_segment_list.call(null,(cljs.core.count.call(null,tempest.levels._STAR_level1_lines_STAR_) - 1),false),"\uFDD0'length-fn":tempest.levels._STAR_default_length_fn_STAR_}),cljs.core.ObjMap.fromObject(["\uFDD0'lines","\uFDD0'segments","\uFDD0'length-fn"],{"\uFDD0'lines":tempest.levels._STAR_level2_lines_STAR_,"\uFDD0'segments":tempest.levels.build_segment_list.call(null,(cljs.core.count.call(null,tempest.levels._STAR_level2_lines_STAR_) - 1),true),"\uFDD0'length-fn":tempest.levels._STAR_default_length_fn_STAR_})]);
