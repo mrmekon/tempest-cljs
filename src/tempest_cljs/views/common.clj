@@ -10,3 +10,10 @@
               [:body
                [:div#wrapper
                 content]]))
+
+(defpartial site-layout [& content]
+  (html5
+   [:head
+    [:title "Tempest in ClojureScript"]]
+   [:body
+    [:div#wrapper content]]))
