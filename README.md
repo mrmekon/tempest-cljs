@@ -6,6 +6,14 @@ I do not know Clojure, nor ClojureScript, nor Javascript, so if you use this as 
 
 Frontend is ClojureScript, backend is Clojure with Noir framework.
 
+## Screenshots
+
+<img src="http://cloud.github.com/downloads/mrmekon/tempest-cljs/screenshot-round.png" />
+
+<img src="http://cloud.github.com/downloads/mrmekon/tempest-cljs/screenshot-flat.png" />
+
+<img src="http://cloud.github.com/downloads/mrmekon/tempest-cljs/screenshot-oblong.png" />
+
 ## Usage
 
 ```bash
