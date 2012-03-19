@@ -1,5 +1,6 @@
 (ns tempest.levels
-  (:require [goog.dom :as dom]
+  (:require [tempest.util :as util]
+            [goog.dom :as dom]
             [goog.Timer :as timer]
             [goog.events :as events]
             [goog.events.EventType :as event-type]
@@ -30,6 +31,12 @@
 ;;;;
 ;;;; "width" is how wide, in pixels, the outer line segment is.
 ;;;;
+;;;;
+;;;; Enemies travel up segments in steps.  A level has the same number
+;;;; of steps per segment, but the size of the steps can vary depending
+;;;; on the dimensions of the segment.  Instead of keeping track of its
+;;;; coordinates, an enemy keeps track of which segment it is on, and
+;;;; how many steps up the segment.
 
 
 (def ^{:doc "Default length, in pixels, from origin to inner line."}
@@ -37,6 +44,8 @@
 
 (def ^{:doc "Default length function, returns argument*4"}
   *default-length-fn* #(* 4 %))
+
+(def *default-steps-per-segment* 100)
 
 (defn build-unlinked-segment-list [max-x]
   (vec ((fn [x segments]
@@ -53,11 +62,6 @@
     )
   )
 
-(defn rad-to-deg [rad]
-  (/ (* rad 180) 3.14159265358979))
-
-(defn deg-to-rad [deg]
-  (/ (* deg 3.14159265358979) 180))
 
 
 
@@ -79,18 +83,14 @@
 ;; (closer to the player) is uniform.
 ;;
 
-(comment (defn theta0 [width depth]
-  "Return theta0 in degrees."
-  (rad-to-deg (js/Math.atan (/ width depth)))))
-
 (defn theta-flat [n width depth]
   "Return theta for segment n.  Width is width of segment at the outer edge,
    closest to the player, and depth is the distance to origin."
-  (js/Math.round (rad-to-deg (js/Math.atan (/ (* (+ n 1) width) depth)))))
+  (js/Math.round (util/rad-to-deg (js/Math.atan (/ (* (+ n 1) width) depth)))))
 
 (defn r-flat [theta depth]
   "Return r for given theta (see theta-flat)."
-  (js/Math.round (/ depth (js/Math.cos (deg-to-rad theta)))))
+  (js/Math.round (/ depth (js/Math.cos (util/deg-to-rad theta)))))
 
 (defn r-theta-pair-flat [n width depth angle-center angle-multiplier]
   "Returns [r theta] for nth straight line segment.  angle-center is the
@@ -143,7 +143,7 @@
    (270 degrees)."
   (js/Math.sqrt (+ (js/Math.pow width 2)
                    (js/Math.pow r0 2)
-                   (* -2 width r0 (js/Math.cos (deg-to-rad gamma)))
+                   (* -2 width r0 (js/Math.cos (util/deg-to-rad gamma)))
                    )))
 
 (defn theta-oblong [width r1 r0 theta0 sumfn]
@@ -153,7 +153,7 @@
    theta theta0.  Provide a function, either + or -, to determine the
    direction.  - builds segments clockwise, + builds counterclockwise."
   (sumfn theta0
-     (rad-to-deg (js/Math.acos
+     (util/rad-to-deg (js/Math.acos
                   (/  (+ (js/Math.pow r1 2)
                          (js/Math.pow r0 2)
                          (* -1 (js/Math.pow width 2)))
@@ -247,7 +247,8 @@
    the level is a closed loop, or open."
   {:lines lines
    :segments (build-segment-list (- (count lines) 1) loops?)
-   :length-fn *default-length-fn*})
+   :length-fn *default-length-fn*
+   :steps *default-steps-per-segment*})
 
 (def *levels*
   [ (make-level-entry *level1_lines* false)
@@ -256,3 +257,4 @@
     (make-level-entry *level4_lines* false)
     (make-level-entry *level5_lines* false)
     (make-level-entry *level6_lines* true)])
+
