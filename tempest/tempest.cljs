@@ -66,7 +66,18 @@
       [(/ r 4) 326]
       [(/ r 4) 214]
       [(/ r 2) 16]])))
-  
+
+(defn build-enemy [level seg-idx & {:keys [step] :or {step 0}}]
+  {:step step
+   :stride 1
+   :segment seg-idx
+   :draw-fn flipper-path-with-width
+   :level level})
+
+(defn update-enemy-position [enemy]
+  (if (< (:step enemy) (:steps (:level enemy)))
+    (assoc enemy :step (+ (:stride enemy) (:step enemy)))
+    enemy))
 
 (defn scale-polar-coord [scalefn coord]
   [(scalefn (first coord)) (last coord)])
@@ -84,6 +95,33 @@
          [(* scale (first coords))
           (last coords)])
        path))
+
+(defn polar-extend [length coord]
+  "Add 'length' to polar radius"
+  [(+ length (first coord))
+   (peek coord)])
+
+(defn path-extend [length path]
+  "Add 'length' to all polar coordinates in path"
+  (map #(polar-extend length %) path))
+
+(defn polar-enemy-coord [level enemy]
+  (let [steplen (step-length level (:segment enemy))
+        offset (* steplen (:step enemy))
+        midpoint (segment-midpoint level (:segment enemy))]
+    (polar-extend offset midpoint)))
+
+(defn enemy-desired-width [level enemy]
+  (let [edges (polar-lines-for-segment level (:segment enemy) false)
+        edge-steps (step-lengths-for-segment-lines level (:segment enemy))
+        offset0 (* (first edge-steps) (:step enemy))
+        offset1 (* (peek edge-steps) (:step enemy))
+        point0 (polar-extend offset0 (first edges))
+        point1 (polar-extend offset1 (peek edges))]
+    (polar-distance point0 point1)))
+    
+    
+
 
 (defn rebase-origin [point origin]
   "Return cartesian coordinate 'point' in relation to 'origin'."
@@ -205,13 +243,35 @@
   (.stroke context)
   )
 
-(defn steps-per-segment [level seg-idx]
+(defn step-length-segment-midpoint [level seg-idx]
   (/
    (-
     (first (segment-midpoint level seg-idx true))
     (first (segment-midpoint level seg-idx false)))
    (:steps level)))
 
+(defn step-length-segment-edge [level line]
+  (/
+   (-
+    ((:length-fn level) (first line))
+    (first line))
+   (:steps level)))
+
+(defn step-length-line [level point0 point1]
+  (js/Math.abs
+   (/
+    (-
+     (first point0)
+     (first point1))
+    (:steps level))))
+
+(defn step-lengths-for-segment-lines [level seg-idx]
+  (let [coords (concat (polar-lines-for-segment level seg-idx false)
+                       (polar-lines-for-segment level seg-idx true))
+        line0 (take-nth 2 coords)
+        line1 (take-nth 2 (rest coords))]
+    [(apply #(step-length-line level %1 %2) line0)
+     (apply #(step-length-line level %1 %2) line1)]))
 
 (defn ^:export canvasDraw [level]
   (let [canvas (dom/getElement "canv1")
