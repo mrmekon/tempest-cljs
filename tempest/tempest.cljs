@@ -7,6 +7,13 @@
             [goog.events.EventType :as event-type]
             [goog.math :as math]))
 
+;;
+;; TODO:
+;;   polar-to-cartesian returns negative y values that need to be reversed
+;;   since y grows down the screen.
+;;
+;;
+
 
 ;;
 ;; Draw player:
@@ -19,17 +26,6 @@
 ;;      \    /
 ;;        \/   <------ origin
 ;;
-;;
-;; drawn as vectors
-;; start at origin (x,y)
-;; right arm: (10, 45 deg)
-;; right claw: (5, 95 deg)
-;; right claw inner: (6, 270 deg)
-;; right arm inner: (8, 220 deg)
-;; left arm inner: (8, 140 deg)
-;; left claw inner: (6, 90 deg)
-;; left claw: (5, 265 deg)
-;; left arm: (10, 315 deg)
 
 (def player-path
   [[20 225]
@@ -40,6 +36,7 @@
    [12 270]
    [10 85]
    [20 135]])
+
 
 (def flipper-path
   [[32 16]
@@ -67,6 +64,7 @@
       [(/ r 4) 214]
       [(/ r 2) 16]])))
 
+
 (defn build-enemy [level seg-idx & {:keys [step] :or {step 0}}]
   {:step step
    :stride 1
@@ -78,6 +76,15 @@
   (if (< (:step enemy) (:steps (:level enemy)))
     (assoc enemy :step (+ (:stride enemy) (:step enemy)))
     enemy))
+
+(defn update-enemy-list [enemy-list]
+  ((fn [oldlist newlist]
+     (let [enemy (first oldlist)]
+       (if (nil? enemy)
+         (vec newlist)
+         (recur (rest oldlist)
+                (cons (update-enemy-position enemy) newlist))))
+         ) enemy-list []))
 
 (defn scale-polar-coord [scalefn coord]
   [(scalefn (first coord)) (last coord)])
@@ -105,27 +112,57 @@
   "Add 'length' to all polar coordinates in path"
   (map #(polar-extend length %) path))
 
-(defn polar-enemy-coord [level enemy]
-  (let [steplen (step-length level (:segment enemy))
+(defn polar-enemy-coord [enemy]
+  (let [steplen (step-length-segment-midpoint (:level enemy) (:segment enemy))
         offset (* steplen (:step enemy))
-        midpoint (segment-midpoint level (:segment enemy))]
+        midpoint (segment-midpoint (:level enemy) (:segment enemy))]
     (polar-extend offset midpoint)))
 
-(defn enemy-desired-width [level enemy]
-  (let [edges (polar-lines-for-segment level (:segment enemy) false)
-        edge-steps (step-lengths-for-segment-lines level (:segment enemy))
+(defn enemy-angle [enemy]
+  (let [edges (polar-lines-for-segment (:level enemy)
+                                       (:segment enemy)
+                                       false)
+        edge-steps (step-lengths-for-segment-lines (:level enemy)
+                                                   (:segment enemy))
+        offset0 (* (first edge-steps) (:step enemy))
+        offset1 (* (peek edge-steps) (:step enemy))
+        point0 (polar-extend offset0 (first edges))
+        point1 (polar-extend offset1 (peek edges))]
+    (util/rad-to-deg
+     (apply js/Math.atan2
+            (vec (reverse (map - (polar-to-cartesian-coords point0)
+                      (polar-to-cartesian-coords point1))))))))
+  
+
+(defn enemy-desired-width [enemy]
+  (let [edges (polar-lines-for-segment (:level enemy)
+                                       (:segment enemy)
+                                       false)
+        edge-steps (step-lengths-for-segment-lines (:level enemy)
+                                                   (:segment enemy))
         offset0 (* (first edge-steps) (:step enemy))
         offset1 (* (peek edge-steps) (:step enemy))
         point0 (polar-extend offset0 (first edges))
         point1 (polar-extend offset1 (peek edges))]
     (polar-distance point0 point1)))
     
-    
+(defn flipper-path-on-level [flipper]
+  (let [coord (polar-enemy-coord flipper)]
+    (rotate-path
+     (enemy-angle flipper)
+     (flipper-path-with-width (* 0.8 (enemy-desired-width flipper))))))
 
-
+(defn add-sub [point0 point1]
+  [(+ (first point1) (first point0))
+   (- (peek point1) (peek point0))])
+  
 (defn rebase-origin [point origin]
   "Return cartesian coordinate 'point' in relation to 'origin'."
-  (map + point origin))
+  ;;(map + point origin))
+  (add-sub point origin))
+
+(defn polar-to-cartesian-centered [point {width :width height :height}]
+  (rebase-origin (polar-to-cartesian-coords point) [(/ width 2) (/ height 2)]))
 
 (defn draw-path [context origin vecs]
   (do
@@ -273,32 +310,69 @@
     [(apply #(step-length-line level %1 %2) line0)
      (apply #(step-length-line level %1 %2) line1)]))
 
-(defn ^:export canvasDraw [level]
+(defn draw-board [level]
   (let [canvas (dom/getElement "canv1")
         context (.getContext canvas "2d")
         timer (goog.Timer. 500)
         dims {:width (.-width canvas) :height (.-height canvas)}
-        level (get levels/*levels* (- (js/parseInt level) 1))]
-    (draw-path context [600 200] (scale-path 0.5 flipper-path))
-    (draw-path context [600 250] (scale-path 0.75 flipper-path))
-    (draw-path context [600 300] (scale-path 1.0 flipper-path))
-    (draw-path context [600 350] (scale-path 1.25 flipper-path))
-    (draw-path context [600 400] (scale-path 1.5 flipper-path))
+        enemy1 (build-enemy level 0 :step 0)
+        enemy2 (build-enemy level 3 :step 20)
+        enemy3 (build-enemy level 8 :step 80)
+        enemy4 (build-enemy level 11 :step 100)]
+    
+    ;;(def enemy-list (vec (map update-enemy-position enemy-list)))
+    ;;(def enemy-list (map update-enemy-position enemy-list))
+    ;;(dorun (map update-enemy-position enemy-list))
+    (def enemy-list (update-enemy-list enemy-list))
+    
+    (.clearRect context 0 0 (:width dims) (:height dims))
+
+    (.beginPath context)
+    
+    (comment (draw-path context
+               (polar-to-cartesian-centered (polar-enemy-coord enemy1) dims)
+               (flipper-path-on-level enemy1))
+    (draw-path context
+               (polar-to-cartesian-centered (polar-enemy-coord enemy2) dims)
+               (flipper-path-on-level enemy2))
+    (draw-path context
+               (polar-to-cartesian-centered (polar-enemy-coord enemy3) dims)
+               (flipper-path-on-level enemy3))
+    (draw-path context
+               (polar-to-cartesian-centered (polar-enemy-coord enemy4) dims)
+               (flipper-path-on-level enemy4)))
     
     (draw-path context [200 200] player-path)
-    (draw-path context [250 250] (rotate-path 45 player-path))
-    (draw-path context [300 300] (rotate-path 90 player-path))
-    (draw-path context [350 350] (rotate-path 135 player-path))
-    (draw-path context [400 400] (rotate-path 180 player-path))
+
+    (doseq [enemy enemy-list]
+      ;;(.log js/console (str "Enemy: " (pr-str (polar-enemy-coord enemy))))
+      ;;(.log js/console (str "Enemy: " (pr-str (:segment enemy)))))
+      (draw-path context
+                 (polar-to-cartesian-centered (polar-enemy-coord enemy) dims)
+                 (flipper-path-on-level enemy)))
+      
+    
     (doseq [idx (range (count (:segments level)))]
-      (.log js/console (str "Index: " (pr-str idx)))
-      (.log js/console (str "Midpoint: " (pr-str (segment-midpoint level idx false))))
-      (.log js/console (str "Length: " (pr-str
-      (-
-       (first (segment-midpoint level idx true))
-       (first (segment-midpoint level idx false))))))
-      (draw-rectangle context (rectangle-to-canvas-coords dims (rectangle-for-segment level idx))))
-  ))
+      (draw-rectangle
+       context
+       (rectangle-to-canvas-coords
+        dims (rectangle-for-segment level idx))))
+    (.closePath context)
+    ))
+
+
+
+(defn ^:export canvasDraw [level]
+  (let [timer (goog.Timer. 50)
+        level (get levels/*levels* (- (js/parseInt level) 1))]
+    (def enemy-list
+      [(build-enemy level 0 :step 0)
+       (build-enemy level 3 :step 20)
+       (build-enemy level 8 :step 80)
+       (build-enemy level 11 :step 100)])
+    (draw-board level)
+    (events/listen timer goog.Timer/TICK #(draw-board level))
+    (. timer (start))))
 
 (comment (defn ^:export canvasDraw []
   (let [canvas (dom/getElement "canv1")
