@@ -1,10 +1,5 @@
 (ns tempest.levels
-  (:require [tempest.util :as util]
-            [goog.dom :as dom]
-            [goog.Timer :as timer]
-            [goog.events :as events]
-            [goog.events.EventType :as event-type]
-            [goog.math :as math]))
+  (:require [tempest.util :as util]))
 
 ;;;;
 ;;;; Levels are defined by a vector of polar coordinates [r theta],
