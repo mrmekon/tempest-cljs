@@ -8,6 +8,8 @@ Frontend is ClojureScript, backend is Clojure with Noir framework.
 
 ## Screenshots
 
+<img src="http://cloud.github.com/downloads/mrmekon/tempest-cljs/screenshot-action.png" />
+
 <img src="http://cloud.github.com/downloads/mrmekon/tempest-cljs/screenshot-round.png" />
 
 <img src="http://cloud.github.com/downloads/mrmekon/tempest-cljs/screenshot-flat.png" />
