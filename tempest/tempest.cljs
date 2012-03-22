@@ -13,8 +13,7 @@
 
 ;;
 ;; TODO:
-;;   polar-to-cartesian returns negative y values that need to be reversed
-;;   since y grows down the screen.
+;;    BUG: there's an extra segment at the top of level 6 with no width
 ;;
 ;;
 
@@ -42,7 +41,7 @@
    [20 135]])
 
 (def player-path
-  [[50 90]
+  [[40 90]
    [44 196]
    [27 333]
    [17 135]
@@ -62,6 +61,14 @@
    [16 214]
    [32 16]])
 
+(def bullet-path
+  [[11.3 90]
+   [16 45]
+   [16 135]
+   [16 225]
+   [16 315]
+   ])
+
 (defn round-path [path]
   (map (fn [coords]
          [(js/Math.round (first coords))
@@ -71,7 +78,8 @@
 (defn flipper-path-with-width [width]
   (let [r (/ width (js/Math.cos (util/deg-to-rad 16)))]
     (round-path
-     [[(/ r 2) 16]
+     [[0 0]
+      [(/ r 2) 16]
       [(/ r 4) 214]
       [(/ r 4) 326]
       [r 164]
@@ -79,32 +87,61 @@
       [(/ r 4) 214]
       [(/ r 2) 16]])))
 
+(defn projectile-path-with-width [width]
+  (let [r (/ width (* 2 (js/Math.cos (util/deg-to-rad 45))))
+        midheight (* r (js/Math.sin (util/deg-to-rad 45)))]
+    (round-path
+     [[midheight 270]
+      [r 45]
+      [r 135]
+      [r 225]
+      [r 315]])))
+
+(defn bullet-path-on-level [bullet]
+  bullet-path)
+
+(defn build-projectile [level seg-idx stride & {:keys [step] :or {step 0}}]
+  {:step step
+   :stride stride
+   :segment seg-idx
+   :level level
+   :path-fn projectile-path-on-level
+   })
 
 (defn build-enemy [level seg-idx & {:keys [step] :or {step 0}}]
   {:step step
    :stride 1
    :segment seg-idx
-   :draw-fn flipper-path-with-width
+   :path-fn flipper-path-on-level
    :level level})
 
 (defn build-player [level seg-idx]
   {:segment seg-idx
    :level level
-   :step (+ 10 (:steps level))})
+   :step (:steps level)})
 
-(defn update-enemy-position [enemy]
+(defn update-entity-position [object]
+  (let [stride (:stride object)
+        maxstep (:steps (:level object))
+        newstep (+ stride (:step object))]
+    (cond
+     (> newstep maxstep) (assoc object :step maxstep)
+     (< newstep 0) (assoc object :step 0)
+     :else (assoc object :step newstep))))
+
+(comment (defn update-enemy-position [enemy]
   (if (< (:step enemy) (:steps (:level enemy)))
     (assoc enemy :step (+ (:stride enemy) (:step enemy)))
-    enemy))
+    enemy)))
 
-(defn update-enemy-list [enemy-list]
+(defn update-entity-list [entity-list]
   ((fn [oldlist newlist]
-     (let [enemy (first oldlist)]
-       (if (nil? enemy)
+     (let [entity (first oldlist)]
+       (if (nil? entity)
          (vec newlist)
          (recur (rest oldlist)
-                (cons (update-enemy-position enemy) newlist))))
-         ) enemy-list []))
+                (cons (update-entity-position entity) newlist))))
+         ) entity-list []))
 
 (defn scale-polar-coord [scalefn coord]
   [(scalefn (first coord)) (last coord)])
@@ -132,10 +169,25 @@
   "Add 'length' to all polar coordinates in path"
   (map #(polar-extend length %) path))
 
-(defn polar-enemy-coord [enemy]
-  (let [steplen (step-length-segment-midpoint (:level enemy) (:segment enemy))
+(comment (defn polar-player-coord [player]
+  (let [steplen (step-length-segment-midpoint (:level player)
+                                              (:segment player))
+        offset (* steplen (:steps (:level player)))
+        midpoint (segment-midpoint (:level player) (:segment player))]
+    (polar-extend offset midpoint))))
+
+(comment (defn polar-enemy-coord [enemy]
+  (let [steplen (step-length-segment-midpoint (:level enemy)
+                                              (:segment enemy))
         offset (* steplen (:step enemy))
         midpoint (segment-midpoint (:level enemy) (:segment enemy))]
+    (polar-extend offset midpoint))))
+
+(defn polar-entity-coord [entity]
+  (let [steplen (step-length-segment-midpoint (:level entity)
+                                              (:segment entity))
+        offset (* steplen (:step entity))
+        midpoint (segment-midpoint (:level entity) (:segment entity))]
     (polar-extend offset midpoint)))
 
 (defn enemy-angle [enemy]
@@ -167,16 +219,22 @@
     (polar-distance point0 point1)))
 
 (defn player-path-on-level [player]
-  (let [coord (polar-player-coord player)]
-    (rotate-path
+  (let [coord (polar-entity-coord player)]
+    (scale-path 0.6 (rotate-path
      (enemy-angle player)
-     player-path)))
+     player-path))))
 
 (defn flipper-path-on-level [flipper]
-  (let [coord (polar-enemy-coord flipper)]
+  (let [coord (polar-entity-coord flipper)]
     (rotate-path
      (enemy-angle flipper)
      (flipper-path-with-width (* 0.8 (enemy-desired-width flipper))))))
+
+(defn projectile-path-on-level [projectile]
+  (let [coord (polar-entity-coord projectile)]
+    (rotate-path
+     (enemy-angle projectile)
+     (projectile-path-with-width (* 0.3 (enemy-desired-width projectile))))))
 
 (defn add-sub [point0 point1]
   [(+ (first point1) (first point0))
@@ -190,17 +248,19 @@
 (defn polar-to-cartesian-centered [point {width :width height :height}]
   (rebase-origin (polar-to-cartesian-coords point) [(/ width 2) (/ height 2)]))
 
-(defn draw-path [context origin vecs]
+(defn draw-path [context origin vecs skipfirst?]
   (do
     (.moveTo context (first origin) (last origin))    
-    ((fn [origin vecs]
+    ((fn [origin vecs skip?]
        (if (nil? vecs)
          nil
          (let [line (first vecs)
                point (rebase-origin (polar-to-cartesian-coords line) origin)]
-           (.lineTo context (first point) (last point))
-           (recur point (next vecs)))))
-     origin vecs)
+           (if-not skip?
+             (.lineTo context (first point) (last point))
+             (.moveTo context (first point) (last point)))
+           (recur point (next vecs) false))))
+     origin vecs skipfirst?)
     (.stroke context)))
 
 
@@ -336,12 +396,6 @@
     [(apply #(step-length-line level %1 %2) line0)
      (apply #(step-length-line level %1 %2) line1)]))
 
-(defn polar-player-coord [player]
-  (let [steplen (step-length-segment-midpoint (:level player)
-                                              (:segment player))
-        offset (* steplen (:steps (:level player)))
-        midpoint (segment-midpoint (:level player) (:segment player))]
-    (polar-extend offset midpoint)))
 
 (defn draw-line [context point0 point1]
     (.moveTo context (first point0) (peek point0))
@@ -355,25 +409,28 @@
     (draw-path context
                (vec (map js/Math.round
                          (polar-to-cartesian-centered
-                          (polar-player-coord player)
+                          (polar-entity-coord player)
                           dims)))
-               (player-path-on-level player))
-    (.closePath context)
+               (player-path-on-level player)
+               true)
+    (.closePath context)))
+
+(defn draw-entities [context dims level entity-list]
+  (doseq [entity entity-list]
     (.beginPath context)
-    (draw-line context
-               [(/ (:width dims) 2) (/ (:height dims) 2)]
-               (vec (map js/Math.round
-                          (polar-to-cartesian-centered
-                           (polar-player-coord player)
-                           dims))))
+    (draw-path context
+               (polar-to-cartesian-centered (polar-entity-coord entity) dims)
+               ((:path-fn entity) entity)
+               true)
     (.closePath context)))
 
 (defn draw-enemies [context dims level]
   (doseq [enemy *enemy-list*]
     (.beginPath context)
     (draw-path context
-               (polar-to-cartesian-centered (polar-enemy-coord enemy) dims)
-               (flipper-path-on-level enemy))
+               (polar-to-cartesian-centered (polar-entity-coord enemy) dims)
+               (flipper-path-on-level enemy)
+               true)
     (.closePath context)))
 
 (defn draw-board [context dims level]
@@ -391,8 +448,21 @@
    (.clearRect context 0 0 (:width dims) (:height dims))
    (draw-board context dims level)
    (draw-player context dims level (deref *player*))
-   (draw-enemies context dims level)
-   (def *enemy-list* (update-enemy-list *enemy-list*))))
+   (comment (draw-enemies context dims level))
+   (draw-entities context dims level *enemy-list*)
+   (draw-entities context dims level @*projectile-list*)
+   (def *enemy-list* (update-entity-list *enemy-list*))
+   (def *projectile-list* (atom (update-entity-list @*projectile-list*)))))
+
+(defn add-projectile [level seg-idx stride step]
+  (do
+    (.log js/console (str "Proj: " (pr-str seg-idx) " "
+                          (pr-str stride) " "
+                          (pr-str step) " "))
+    (def *projectile-list*
+      (atom (vec (conj @*projectile-list*
+             (build-projectile level seg-idx stride :step step)))))))
+
 
 (defn keypress [event]
   (let [player @*player*
@@ -401,15 +471,16 @@
         segment (:segment player)
         key (.-keyCode event)]
     (condp = key
-          key-codes/LEFT (def *player*
+          key-codes/RIGHT (def *player*
                            (atom
                             (assoc @*player* :segment
                                    (mod (+ segment 1) seg-count))))
-          key-codes/RIGHT (def *player*
+          key-codes/LEFT (def *player*
                            (atom
                             (assoc @*player* :segment
                                    (mod (+ (- segment 1) seg-count)
                                         seg-count))))
+          key-codes/SPACE (add-projectile level segment -5 (:steps level))
           nil
           )))
 
@@ -430,6 +501,9 @@
        (build-enemy level 11 :step 100)])
     (def *player*
       (atom (doall (build-player level 7))))
+    (def *projectile-list*
+      (atom [(build-projectile level 0 4)
+             (build-projectile level 8 -4 :step 100)]))
 
     (events/listen timer goog.Timer/TICK #(draw-world context dims level))
     (events/listen handler "key" (fn [e] (keypress e)))
