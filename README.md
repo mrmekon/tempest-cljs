@@ -1,10 +1,14 @@
 # tempest-cljs
 
-This is an experiment with ClojureScript.  It will never be completed, but will slowly head in the direction of becoming the Tempest arcade game, until I move on to other things.
+[tempest-wiki]: <http://en.wikipedia.org/wiki/Tempest_(video_game)>
 
-I do not know Clojure, nor ClojureScript, nor Javascript, so if you use this as a reference, be careful.  And don't judge my programming skills based on this.
+This is an experiment to learn ClojureScript.  It will (probably) never be completed, but will slowly head in the direction of becoming the [Tempest arcade game][tempest-wiki], until I move on to other things.
 
-Frontend is ClojureScript, backend is Clojure with Noir framework.
+I do not know Clojure, nor ClojureScript, nor Javascript, so if you use this as a reference, be careful.
+
+Additionally, I developed the Tempest logic without much forethought.  It just morphed its way up from drawing random lines.  That means you're looking at thousands of floating point operations per frame... probably not a web browser's strongest point.
+
+Game logic is written in ClojureScript, backend is in Clojure with the Noir framework.
 
 ## Screenshots
 
@@ -18,10 +22,20 @@ Frontend is ClojureScript, backend is Clojure with Noir framework.
 
 ## Usage
 
+### Compile ClojureScript (must have cljsc installed)
+
+```bash
+cd tempest-cljs
+cljsc tempest '{:optimizations :simple :pretty-print true}' > resources/public/tempest.js
+```
+
+### Run Jetty webserver hosting Noir app
 ```bash
 lein deps
 lein run
 ```
+
+Then navigate to http://localhost:8080/tempest/5.  Replace 5 with the level you want to play.
 
 ## License
 
