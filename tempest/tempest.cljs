@@ -443,6 +443,12 @@
         dims (rectangle-for-segment level idx))))
     (.closePath context)))
 
+(defn projectile-off-level? [projectile]
+  (cond
+   (zero? (:step projectile)) true
+   (>= (:step projectile) (:steps (:level projectile))) true
+   :else false))
+
 (defn draw-world [context dims level]
   (doseq []
    (.clearRect context 0 0 (:width dims) (:height dims))
@@ -451,18 +457,17 @@
    (comment (draw-enemies context dims level))
    (draw-entities context dims level *enemy-list*)
    (draw-entities context dims level @*projectile-list*)
-   (def *enemy-list* (update-entity-list *enemy-list*))
-   (def *projectile-list* (atom (update-entity-list @*projectile-list*)))))
+   (when (not @*paused*)
+     (def *enemy-list* (update-entity-list *enemy-list*))
+     (def *projectile-list* (atom (update-entity-list @*projectile-list*)))
+     (def *projectile-list* (atom (vec (remove projectile-off-level? @*projectile-list*))))
+     )))
 
 (defn add-projectile [level seg-idx stride step]
-  (do
-    (.log js/console (str "Proj: " (pr-str seg-idx) " "
-                          (pr-str stride) " "
-                          (pr-str step) " "))
-    (def *projectile-list*
-      (atom (vec (conj @*projectile-list*
-             (build-projectile level seg-idx stride :step step)))))))
-
+  (def *projectile-list*
+    (atom
+     (vec (conj @*projectile-list*
+                (build-projectile level seg-idx stride :step step))))))
 
 (defn keypress [event]
   (let [player @*player*
@@ -481,8 +486,11 @@
                                    (mod (+ (- segment 1) seg-count)
                                         seg-count))))
           key-codes/SPACE (add-projectile level segment -5 (:steps level))
+          key-codes/ESC (def *paused* (atom (not @*paused*)))
           nil
           )))
+
+(def *paused* (atom false))
 
 (defn ^:export canvasDraw [level]
   (let [document (dom/getDocument)
@@ -503,7 +511,8 @@
       (atom (doall (build-player level 7))))
     (def *projectile-list*
       (atom [(build-projectile level 0 4)
-             (build-projectile level 8 -4 :step 100)]))
+             (build-projectile level 8 -4 :step 100)
+             (build-projectile level 5 4 :step 100)]))
 
     (events/listen timer goog.Timer/TICK #(draw-world context dims level))
     (events/listen handler "key" (fn [e] (keypress e)))
