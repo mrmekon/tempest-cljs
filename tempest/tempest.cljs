@@ -9,37 +9,65 @@
             [goog.events.KeyCodes :as key-codes]
             [clojure.browser.repl :as repl]))
 
+;;
+;;
+;; Rough design notes:
+;;  * Nearly everything is defined with polar coordinates (length and angle)
+;;  * "Entities" are players, enemies, projectiles
+;;  * "Entities" are defined by a path, a series of polar coordinates, that
+;;    are in relation to the previous point in the path.
+;;  * Polar coordinates are converted to cartesian coordinates shortly before
+;;    drawing.
+;;  * Levels have a number of "steps" defined, which is how many occupiable
+;;    points the level has (instead of allowing continuous motion).
+;;  * An entity's location in the level is dictated by its current segment,
+;;    and which step of the level it's on.
+;;  * An entity has a "stride", which is how many steps it moves per update.
+;;    The sign of the stride is direction, with positive strides moving out
+;;    towards the player.
+;;
+;; Obscure design oddities:
+;;  * draw-path can optionally follow, but not draw, the first line of an
+;;    entity's path.  There is a crazy reason for this.  The 'center' of
+;;    an entity when drawn ends up being the first point drawn.  The first
+;;    vertex is the one that gets centered on its location on the board. If
+;;    the needs to be centered around a point that is not drawn (or just
+;;    not its first point), the first, undrawn line given to draw-path
+;;    can be a line from where the entity's center should be to its first
+;;    drawn vertex.  An example is the player's ship, whose first vertex
+;;    is it's "rear thruster", but who's origin when drawing must be up
+;;    in the front center of the ship.
+;;
+;;
+
+
 ;;(repl/connect "http://localhost:9000/repl")
 
 ;;
 ;; TODO:
-;;    BUG: there's an extra segment at the top of level 6 with no width
-;;
-;;
+;;   * BUG: there's an extra segment at the top of level 6 with no width
+;;   * Bullet updates should check if they hit or passed over an enemy
+;;   * Flippers should.. flip.
+;;   * Player should be sucked down the level if a flipper touches him
+;;   * MOAR ENEMIES
+;;   * Jump?  Is that possible with this design?  I think so, easily, by
+;;     scaling just the first, undrawn line of player.  It ends up being
+;;     normal to the segment's top line.
+;;   * Power ups.  Bonus points if they're crazy swirly particle things.
+;;   * Board colors.  Blue on black is the classic.
+;;   * Current segment highlight color
+;;   * Browser + keyboard input stuff
+;;     - Find appropriate size for canvas.  Maybe there's a way to make it
+;;       "full screen"
+;;     - Don't let spacebar scroll the screen, or use a different key
+;;     - Any way to change repeat rate?  Probably not
+;;     - Any way to use the mouse?
+;;     - I'm not above making a custom rotary controller.
+;;     - Two keys at the same time?  Gotta swirl-n-shoot.
+;;   * Offset flat levels up more, instead of displaying them at the bottom.
 
 
-;;
-;; Draw player:
-;;
-;;               
-;;  /|         |\ 
-;;  | |        | | <-- claw
-;;   \ \      / /
-;;    \ \ __ / / <---- arm
-;;      \    /
-;;        \/   <------ origin
-;;
-
-(def player-path
-  [[20 225]
-   [10 275]
-   [12 90]
-   [16 40]
-   [16 320]
-   [12 270]
-   [10 85]
-   [20 135]])
-
+;; Path that defines player.
 (def player-path
   [[40 90]
    [44 196]
@@ -69,13 +97,17 @@
    [16 315]
    ])
 
-(defn round-path [path]
+(defn round-path
+  "Rounds all numbers in a path (vector of 2-tuples) to nearest integer."
+  [path]
   (map (fn [coords]
          [(js/Math.round (first coords))
           (js/Math.round (last coords))])
        path))
 
-(defn flipper-path-with-width [width]
+(defn flipper-path-with-width
+  "Returns a path to draw a 'flipper' enemy with given width."
+  [width]
   (let [r (/ width (js/Math.cos (util/deg-to-rad 16)))]
     (round-path
      [[0 0]
@@ -87,7 +119,9 @@
       [(/ r 4) 214]
       [(/ r 2) 16]])))
 
-(defn projectile-path-with-width [width]
+(defn projectile-path-with-width
+  "Returns a path to draw a projectile with the given width."
+  [width]
   (let [r (/ width (* 2 (js/Math.cos (util/deg-to-rad 45))))
         midheight (* r (js/Math.sin (util/deg-to-rad 45)))]
     (round-path
@@ -97,10 +131,11 @@
       [r 225]
       [r 315]])))
 
-(defn bullet-path-on-level [bullet]
-  bullet-path)
-
-(defn build-projectile [level seg-idx stride & {:keys [step] :or {step 0}}]
+(defn build-projectile
+  "Returns a dictionary describing a projectile (bullet) on the given level,
+   in the given segment, with a given stride (steps per update to move, with
+   negative meaning in and positive meaning out), and given step to start on."
+  [level seg-idx stride & {:keys [step] :or {step 0}}]
   {:step step
    :stride stride
    :segment seg-idx
@@ -108,19 +143,29 @@
    :path-fn projectile-path-on-level
    })
 
-(defn build-enemy [level seg-idx & {:keys [step] :or {step 0}}]
+(defn build-enemy
+  "Returns a dictionary describing an enemy on the given level and segment,
+   and starting on the given step.  Step defaults to 0 (innermost step of
+   level) if not specified. TODO: Only makes flippers."
+  [level seg-idx & {:keys [step] :or {step 0}}]
   {:step step
    :stride 1
    :segment seg-idx
    :path-fn flipper-path-on-level
    :level level})
 
-(defn build-player [level seg-idx]
+(defn build-player
+  "Returns a dictionary describing a player on the given level and segment."
+  [level seg-idx]
   {:segment seg-idx
    :level level
    :step (:steps level)})
 
-(defn update-entity-position [object]
+(defn update-entity-position!
+  "Return entity updated with a new position based on its current location and
+   stride.  Won't go lower than 0, or higher than the maximum steps of the
+   level."
+  [object]
   (let [stride (:stride object)
         maxstep (:steps (:level object))
         newstep (+ stride (:step object))]
@@ -134,63 +179,66 @@
     (assoc enemy :step (+ (:stride enemy) (:step enemy)))
     enemy)))
 
-(defn update-entity-list [entity-list]
+(defn update-entity-list
+  "Recursively call update-entity-position! on all entities in list."
+  [entity-list]
   ((fn [oldlist newlist]
      (let [entity (first oldlist)]
        (if (nil? entity)
          (vec newlist)
          (recur (rest oldlist)
-                (cons (update-entity-position entity) newlist))))
+                (cons (update-entity-position! entity) newlist))))
          ) entity-list []))
 
-(defn scale-polar-coord [scalefn coord]
+(defn scale-polar-coord
+  "Return a polar coordinate with the first element (radius) scaled using
+   the function scalefn"
+  [scalefn coord]
   [(scalefn (first coord)) (last coord)])
 
-(defn rotate-path [angle path]
+(defn rotate-path
   "Add angle to all polar coordinates in path."
+  [angle path]
   (map (fn [coords]
          [(first coords)
           (mod (+ angle (last coords)) 360)])
        path))
 
-(defn scale-path [scale path]
+(defn scale-path
   "Multiply all lengths of polar coordinates in path by scale."
+  [scale path]
   (map (fn [coords]
          [(* scale (first coords))
           (last coords)])
        path))
 
-(defn polar-extend [length coord]
-  "Add 'length' to polar radius"
+(defn polar-extend
+  "Add 'length' to radius of polar coordinate."
+  [length coord]
   [(+ length (first coord))
    (peek coord)])
 
-(defn path-extend [length path]
+(defn path-extend
   "Add 'length' to all polar coordinates in path"
+  [length path]
   (map #(polar-extend length %) path))
 
-(comment (defn polar-player-coord [player]
-  (let [steplen (step-length-segment-midpoint (:level player)
-                                              (:segment player))
-        offset (* steplen (:steps (:level player)))
-        midpoint (segment-midpoint (:level player) (:segment player))]
-    (polar-extend offset midpoint))))
-
-(comment (defn polar-enemy-coord [enemy]
-  (let [steplen (step-length-segment-midpoint (:level enemy)
-                                              (:segment enemy))
-        offset (* steplen (:step enemy))
-        midpoint (segment-midpoint (:level enemy) (:segment enemy))]
-    (polar-extend offset midpoint))))
-
-(defn polar-entity-coord [entity]
+(defn polar-entity-coord
+  "Returns current polar coordinates to the entity."
+  [entity]
   (let [steplen (step-length-segment-midpoint (:level entity)
                                               (:segment entity))
         offset (* steplen (:step entity))
         midpoint (segment-midpoint (:level entity) (:segment entity))]
     (polar-extend offset midpoint)))
 
-(defn enemy-angle [enemy]
+(defn enemy-angle
+  "Returns the angle from origin that the enemy needs to be rotated to
+   appear in the correct orientation at its current spot on the level.
+   In reality, it returns the angle of the line that traverses the segment
+   across the midpoint of the enemy.  TODO: This should be renamed to
+   'entity-angle', it works with anything on the board."
+  [enemy]
   (let [edges (polar-lines-for-segment (:level enemy)
                                        (:segment enemy)
                                        false)
@@ -206,7 +254,12 @@
                       (polar-to-cartesian-coords point1))))))))
   
 
-(defn enemy-desired-width [enemy]
+(defn enemy-desired-width
+  "Returns how wide the given enemy should be drawn to span the full width
+   of its current location.  In reality, that means returning the length of
+   the line that spans the level segment, cutting through the enemy's
+   midpoint.  TODO: rename this entity-desired-width."
+  [enemy]
   (let [edges (polar-lines-for-segment (:level enemy)
                                        (:segment enemy)
                                        false)
@@ -218,37 +271,66 @@
         point1 (polar-extend offset1 (peek edges))]
     (polar-distance point0 point1)))
 
-(defn player-path-on-level [player]
+(defn player-path-on-level
+  "Returns the path of polar coordinates to draw the player correctly at its
+   current location.  It corrects for size and angle."
+  [player]
   (let [coord (polar-entity-coord player)]
     (scale-path 0.6 (rotate-path
      (enemy-angle player)
      player-path))))
 
-(defn flipper-path-on-level [flipper]
+(defn flipper-path-on-level
+  "Returns the path of polar coordinates to draw a flipper correctly at its
+   current location.  It corrects for size and angle."
+  [flipper]
   (let [coord (polar-entity-coord flipper)]
     (rotate-path
      (enemy-angle flipper)
      (flipper-path-with-width (* 0.8 (enemy-desired-width flipper))))))
 
-(defn projectile-path-on-level [projectile]
+(defn projectile-path-on-level
+  "Returns the path of polar coordinates to draw a projectile correctly at its
+   current location.  It corrects for size and angle."
+  [projectile]
   (let [coord (polar-entity-coord projectile)]
     (rotate-path
      (enemy-angle projectile)
      (projectile-path-with-width (* 0.3 (enemy-desired-width projectile))))))
 
-(defn add-sub [point0 point1]
+(defn add-sub
+  "Given two polar coordinates, returns one polar coordinate with the first
+   elements (radii) summed, and the second elements (angles) subtracted.
+   i.e. [r1+r0, th1-th0].  This is used to move point0 to be relative to
+   point1."
+  [point0 point1]
   [(+ (first point1) (first point0))
    (- (peek point1) (peek point0))])
   
-(defn rebase-origin [point origin]
+(defn rebase-origin
   "Return cartesian coordinate 'point' in relation to 'origin'."
-  ;;(map + point origin))
+  [point origin]
   (add-sub point origin))
 
-(defn polar-to-cartesian-centered [point {width :width height :height}]
+(defn polar-to-cartesian-centered
+  "Converts a polar coordinate (r,theta) into a cartesian coordinate (x,y)
+   centered on in a rectangle with given width and height."
+  [point {width :width height :height}]
   (rebase-origin (polar-to-cartesian-coords point) [(/ width 2) (/ height 2)]))
 
-(defn draw-path [context origin vecs skipfirst?]
+(defn draw-path
+  "Draws a 'path', a vector of multiple polar coordinates, on an HTML5 2D
+   drawing canvas.
+
+   context -- The '2D Context' of an HTML5 canvas element
+   origin -- The point (cartesian coordinate) to start drawing from
+   vecs -- Vector of polar coordinates to draw
+   skipfirst? -- Whether the first line described by vecs should be drawn.  If
+      no, the first line can be used to offset the path, in effect changing the
+      'midpoint' of the entity being drawn.  If yes, the 'midpoint' of the
+      object is the first vertex from which the first line is drawn.
+  "
+  [context origin vecs skipfirst?]
   (do
     (.moveTo context (first origin) (last origin))    
     ((fn [origin vecs skip?]
