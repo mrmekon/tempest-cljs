@@ -240,7 +240,7 @@
 
 ;; Oblong level, a closed, spikey flower
 (def *level6_lines* (vec (oblong-level [135 45 90 135 45 90 135 45 90 135 45 90
-                                        135 45 90 135 45 90 135 45 90 135 45 135] 15 80)))
+                                        135 45 90 135 45 90 135 45 90 135 45] 15 80)))
 
 
 
