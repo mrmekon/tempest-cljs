@@ -78,28 +78,32 @@
 ;; (closer to the player) is uniform.
 ;;
 
-(defn theta-flat [n width depth]
+(defn theta-flat 
   "Return theta for segment n.  Width is width of segment at the outer edge,
    closest to the player, and depth is the distance to origin."
+  [n width depth]
   (js/Math.round (util/rad-to-deg (js/Math.atan (/ (* (+ n 1) width) depth)))))
 
-(defn r-flat [theta depth]
+(defn r-flat 
   "Return r for given theta (see theta-flat)."
+  [theta depth]
   (js/Math.round (/ depth (js/Math.cos (util/deg-to-rad theta)))))
 
-(defn r-theta-pair-flat [n width depth angle-center angle-multiplier]
+(defn r-theta-pair-flat 
   "Returns [r theta] for nth straight line segment.  angle-center is the
    angle that theta should be in reference to (probably 270 degrees, a line
    straight down), and angle-multiplier should be -1 to built left or 1 to
    build right."
+  [n width depth angle-center angle-multiplier]
   (let [th (theta-flat n width depth)]
     [(r-flat th depth) (+ angle-center (* th angle-multiplier))]))
 
-(defn flat-level [segment-count segment-width segment-depth]
+(defn flat-level 
   "Return a list of line segments representing a flat level with segment-count
    segments ON EACH SIDE OF CENTER (2*segment-count total), width at the player
    edge of segment-width, and distance from origin to inner-edge as
    segment-depth"
+  [segment-count segment-width segment-depth]
   (concat (reverse (map #(r-theta-pair-flat % segment-width segment-depth 270 -1) (range segment-count)))
           [[80 270]]
           (map #(r-theta-pair-flat % segment-width segment-depth 270 1) (range segment-count))))
@@ -131,22 +135,24 @@
 ;; a list of angles.
 ;;
 
-(defn r-oblong [gamma width r0]
+(defn r-oblong 
   "Calculate the next radius of an oblong triangle.  Depends on the gamma
    specified for this segment, the width of the segment, and the previous
    radius r0.  For the first segment, r0 should be straight down
    (270 degrees)."
+  [gamma width r0]
   (js/Math.sqrt (+ (js/Math.pow width 2)
                    (js/Math.pow r0 2)
                    (* -2 width r0 (js/Math.cos (util/deg-to-rad gamma)))
                    )))
 
-(defn theta-oblong [width r1 r0 theta0 sumfn]
+(defn theta-oblong 
   "Calculate the next theta, the angle (in degrees) in relation to origin,
    for an oblong triangle.  This depends on the width of the segment, the
    previous radius r0, the current radius r1 (see r-oblong), the previous
    theta theta0.  Provide a function, either + or -, to determine the
    direction.  - builds segments clockwise, + builds counterclockwise."
+  [width r1 r0 theta0 sumfn]
   (sumfn theta0
      (util/rad-to-deg (js/Math.acos
                   (/  (+ (js/Math.pow r1 2)
@@ -154,16 +160,18 @@
                          (* -1 (js/Math.pow width 2)))
                       (* 2 r1 r0))))))
   
-(defn r-theta-pair-oblong [gamma width r0 theta0 sumfn]
+(defn r-theta-pair-oblong 
   "Return a vector [r theta] representing a line segment.  See
    theta-oblong and r-oblong for parameters."
+  [gamma width r0 theta0 sumfn]
   (let [r1 (r-oblong gamma width r0)]
     (vec (map js/Math.round [r1 (theta-oblong width r1 r0 theta0 sumfn)]))
     ))
 
-(defn oblong-half-level [gammas width height sumfn]
+(defn oblong-half-level 
   "Builds vector of line segments in relation to a line dropped straight down,
    with the angles given in gammas.  Only builds in one direction."
+  [gammas width height sumfn]
   ((fn [gammas r0 theta0 segments]
      (if (= (count gammas) 0)
        segments
@@ -171,9 +179,10 @@
          (recur (rest gammas) (first pair) (last pair) (cons pair segments)))))
    gammas height 270 []))
 
-(defn oblong-level [gammas width height]
+(defn oblong-level 
   "Builds a full level from the angles given in gammas.  Level is symmetric,
    and can be open or closed.  Always starts with a straight down line."
+  [gammas width height]
   (concat
    (oblong-half-level gammas width height -)
    [[height 270]]
@@ -235,11 +244,12 @@
 
 
 
-(defn make-level-entry [lines loops?]
+(defn make-level-entry 
   "Make a map that defines a level.  A level contains a vector of lines, a
    vector of segments constructed of pairs of lines, and a length function.
    This function takes a vector of lines, and a boolean specifying whether
    the level is a closed loop, or open."
+  [lines loops?]
   {:lines lines
    :segments (build-segment-list (- (count lines) 1) loops?)
    :length-fn *default-length-fn*

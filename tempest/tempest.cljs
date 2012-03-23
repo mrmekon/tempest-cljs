@@ -174,11 +174,6 @@
      (< newstep 0) (assoc object :step 0)
      :else (assoc object :step newstep))))
 
-(comment (defn update-enemy-position [enemy]
-  (if (< (:step enemy) (:steps (:level enemy)))
-    (assoc enemy :step (+ (:stride enemy) (:step enemy)))
-    enemy)))
-
 (defn update-entity-list
   "Recursively call update-entity-position! on all entities in list."
   [entity-list]
@@ -348,6 +343,8 @@
 
 
 (defn polar-to-cartesian-coords
+  "Converts polar coordinates to cartesian coordinates.  If optional length-fn
+   is specified, it is applied to the radius first."
   ([[r angle]] [(math/angleDx angle r) (math/angleDy angle r)])
   ([[r angle] length-fn]
      (let [newr (length-fn r)]
@@ -355,14 +352,19 @@
      )
   )
 
-(defn polar-distance [[r0 theta0] [r1 theta1]]
+(defn polar-distance
+  "Returns distance between to points specified by polar coordinates."
+  [[r0 theta0] [r1 theta1]]
   (js/Math.sqrt
    (+
     (js/Math.pow r0 2)
     (js/Math.pow r1 2)
     (* -2 r0 r1 (js/Math.cos (util/deg-to-rad (- theta1 theta0)))))))
 
-(defn polar-midpoint-r [[r0 theta0] [r1 theta1]]
+(defn polar-midpoint-r
+  "Returns the radius to the midpoint of a line drawn between two polar
+   coordinates."
+  [[r0 theta0] [r1 theta1]]
   (js/Math.round
    (/
     (js/Math.sqrt 
@@ -372,7 +374,10 @@
       (* 2 r0 r1 (js/Math.cos (util/deg-to-rad (- theta1 theta0))))))
     2)))
 
-(defn polar-midpoint-theta  [[r0 theta0] [r1 theta1]]
+(defn polar-midpoint-theta
+  "Returns the angle to the midpoint of a line drawn between two polar
+   coordinates."
+  [[r0 theta0] [r1 theta1]]
   (js/Math.round
    (mod
     (+ (util/rad-to-deg
@@ -386,18 +391,35 @@
          ))
        360) 360)))
 
-(defn polar-midpoint [line0 line1]
-  [(polar-midpoint-r line0 line1)
-   (polar-midpoint-theta line0 line1)]
+(defn polar-midpoint
+  "Returns polar coordinate representing the midpoint between the two
+   points specified.  This can be used to draw a line down the middle
+   of a level segment -- the line that entities should follow."
+  [point0 point1]
+  [(polar-midpoint-r point0 point1)
+   (polar-midpoint-theta point0 point1)]
   )
 
-(defn segment-midpoint [level seg-idx scaled?]
+(defn segment-midpoint
+  "Given a level and a segment index, returns the midpoint of the segment.
+   scaled? determines whether it gives you the inner (false) or outer (true)
+   point."
+  [level seg-idx scaled?]
   (apply polar-midpoint
          (polar-lines-for-segment level seg-idx scaled?)))
 
-;; Returns vector [line0 line1], where lineN is the polar coordinates
-;; describing an edge line of a segment.
-(defn polar-lines-for-segment [level seg-idx scaled?]
+(defn polar-lines-for-segment
+  "Returns vector [line0 line1], where lineN is a polar coordinate describing
+   the line from origin (canvas midpoint) that would draw the edges of a level
+   segment.
+
+   'scaled?' sets whether you want the unscaled, inner point, or the
+   outer point scaled with the level's scale function.
+
+   To actually draw a level's line, you would move to the unscaled point
+   without drawing, and then draw to the scaled point.
+   "
+  [level seg-idx scaled?]
   (let [[seg0 seg1] (get (:segments level) seg-idx)
         line0 (get (:lines level) seg0)
         line1 (get (:lines level) seg1)]
@@ -407,9 +429,10 @@
       [line0 line1]
     )))
 
-;; Returns vector [[x0 y0] [x1 y1] [x2 y2] [x3 y3]] describing segment rectangle
-;; in cartesian coordinates.
-(defn rectangle-for-segment [level seg-idx]
+(defn rectangle-for-segment
+  "Returns vector [[x0 y0] [x1 y1] [x2 y2] [x3 y3]] describing segment's
+   rectangle in cartesian coordinates."
+  [level seg-idx]
   (let [[seg0 seg1] (get (:segments level) seg-idx)
         line0 (get (:lines level) seg0)
         line1 (get (:lines level) seg1)]
@@ -419,28 +442,30 @@
      (polar-to-cartesian-coords line1)]
     ))
 
-(defn point-to-canvas-coords [{width :width height :height} p]
+(defn point-to-canvas-coords
+  "Center a cartesian coordinate centered around (0,0) to be centered around
+   the middle of a rectangle with the given width and height.  It inverts y,
+   assuming that the input y is 'up', and in the output y is 'down', as is
+   the case with an HTML5 canvas."
+  [{width :width height :height} p]
   (let [xmid (/ width 2)
         ymid (/ height 2)]
     [(+ (first p) xmid) (- ymid (last p))]
   ))
 
-(defn rectangle-to-canvas-coords [dims rect]
+(defn rectangle-to-canvas-coords
+  "Given a rectangle (vector of 4 cartesian coordinates) centered around (0,0),
+   this function shifts them to be centered around the center of an HTML5
+   canvas with the :width and :height set in dims."
+  [dims rect]
   (map #(point-to-canvas-coords dims %) rect)
   )
 
-(defn rand-coord [{width :width height :height}]
-  [(math/randomInt width)
-   (math/randomInt height)])
 
-(defn draw-random-line [context dims]
-  (let [[x1 y1] (rand-coord dims)
-        [x2 y2] (rand-coord dims)]
-    (.moveTo context x1,y1)
-    (.lineTo context x2,y2)
-    (.stroke context)))  
-
-(defn draw-rectangle [context [p0 & points]]
+(defn draw-rectangle
+  "Draws a rectangle (4 cartesian coordinates in a vector) on the 2D context
+   of an HTML5 canvas."
+  [context [p0 & points]]
   (.moveTo context (first p0) (last p0))
   (doseq [p points]
     (.lineTo context (first p) (last p)))
@@ -448,21 +473,29 @@
   (.stroke context)
   )
 
-(defn step-length-segment-midpoint [level seg-idx]
+(defn step-length-segment-midpoint
+  "Finds the 'step length' of a line through the middle of a level's segment.
+   This is how many pixels an entity should move per update to travel one
+   step."
+  [level seg-idx]
   (/
    (-
     (first (segment-midpoint level seg-idx true))
     (first (segment-midpoint level seg-idx false)))
    (:steps level)))
 
-(defn step-length-segment-edge [level line]
+(defn step-length-segment-edge
+  "Finds the 'step length' of a line along the edge of a level's segment."
+  [level line]
   (/
    (-
     ((:length-fn level) (first line))
     (first line))
    (:steps level)))
 
-(defn step-length-line [level point0 point1]
+(defn step-length-line
+  "Finds the 'step length' of an arbitrary line on the given level."
+  [level point0 point1]
   (js/Math.abs
    (/
     (-
@@ -470,7 +503,10 @@
      (first point1))
     (:steps level))))
 
-(defn step-lengths-for-segment-lines [level seg-idx]
+(defn step-lengths-for-segment-lines
+  "Returns a vector [len0 len1] with the 'step length' for the two edge
+   lines that mark the boundaries of the given segment."
+  [level seg-idx]
   (let [coords (concat (polar-lines-for-segment level seg-idx false)
                        (polar-lines-for-segment level seg-idx true))
         line0 (take-nth 2 coords)
@@ -479,13 +515,20 @@
      (apply #(step-length-line level %1 %2) line1)]))
 
 
-(defn draw-line [context point0 point1]
-    (.moveTo context (first point0) (peek point0))
-    (.lineTo context (first point1) (peek point1))
-    (.stroke context))
+(defn draw-line
+  "Draws a line on the given 2D context of an HTML5 canves element, between
+   the two given cartesian coordinates."
+  [context point0 point1]
+  (.moveTo context (first point0) (peek point0))
+  (.lineTo context (first point1) (peek point1))
+  (.stroke context))
   
 
-(defn draw-player [context dims level player]
+(defn draw-player
+  "Draws a player, defined by the given path 'player', on the 2D context of
+   an HTML5 canvas, with :height and :width specified in dims, and on the
+   given level."
+  [context dims level player]
   (doseq []
     (.beginPath context)
     (draw-path context
@@ -497,7 +540,11 @@
                true)
     (.closePath context)))
 
-(defn draw-entities [context dims level entity-list]
+(defn draw-entities
+  "Draws all the entities, defined by paths in 'entity-list', on the 2D context
+   of an HTML5 canvas, with :height and :width specified in dims, and on the
+   given level."
+  [context dims level entity-list]
   (doseq [entity entity-list]
     (.beginPath context)
     (draw-path context
@@ -506,7 +553,11 @@
                true)
     (.closePath context)))
 
-(defn draw-enemies [context dims level]
+(defn draw-enemies
+  "Draws all the enemies, defined by paths in 'enemy-list', on the 2D context
+   of an HTML5 canvas, with :height and :width specified in dims, and on the
+   given level. TODO: This only draws flippers."
+  [context dims level]
   (doseq [enemy *enemy-list*]
     (.beginPath context)
     (draw-path context
@@ -515,7 +566,10 @@
                true)
     (.closePath context)))
 
-(defn draw-board [context dims level]
+(defn draw-board
+  "Draws a level on a 2D context of an HTML5 canvas with :height and :width
+   specified in dims."
+  [context dims level]
   (doseq []
    (.beginPath context)
     (doseq [idx (range (count (:segments level)))]
@@ -525,18 +579,22 @@
         dims (rectangle-for-segment level idx))))
     (.closePath context)))
 
-(defn projectile-off-level? [projectile]
+(defn projectile-off-level?
+  "Returns true if a projectile has reached either boundary of the level."
+  [projectile]
   (cond
    (zero? (:step projectile)) true
    (>= (:step projectile) (:steps (:level projectile))) true
    :else false))
 
-(defn draw-world [context dims level]
+(defn draw-world
+  "Call all of the drawing functions to redraw the scene, and update all
+   of the entities on the level."
+  [context dims level]
   (doseq []
    (.clearRect context 0 0 (:width dims) (:height dims))
    (draw-board context dims level)
    (draw-player context dims level (deref *player*))
-   (comment (draw-enemies context dims level))
    (draw-entities context dims level *enemy-list*)
    (draw-entities context dims level @*projectile-list*)
    (when (not @*paused*)
@@ -545,13 +603,17 @@
      (def *projectile-list* (atom (vec (remove projectile-off-level? @*projectile-list*))))
      )))
 
-(defn add-projectile [level seg-idx stride step]
+(defn add-projectile
+  "Add a new projectile to the global list of live projectiles."
+  [level seg-idx stride step]
   (def *projectile-list*
     (atom
      (vec (conj @*projectile-list*
                 (build-projectile level seg-idx stride :step step))))))
 
-(defn keypress [event]
+(defn keypress
+  "Respond to keyboard key presses."
+  [event]
   (let [player @*player*
         level (:level player)
         seg-count (count (:segments level))
@@ -574,7 +636,10 @@
 
 (def *paused* (atom false))
 
-(defn ^:export canvasDraw [level]
+(defn ^:export canvasDraw
+  "Begins a camge of tempest.  'level' specified as a string representation
+   of an integer."
+  [level]
   (let [document (dom/getDocument)
         timer (goog.Timer. 50)
         level (get levels/*levels* (- (js/parseInt level) 1))
@@ -600,12 +665,3 @@
     (events/listen handler "key" (fn [e] (keypress e)))
     (. timer (start))))
 
-(comment (defn ^:export canvasDraw []
-  (let [canvas (dom/getElement "canv1")
-        context (.getContext canvas "2d")
-        timer (goog.Timer. 500)
-        dims {:width 500 :height 400}]
-    ;;(.log js/console (str "Enemy: " (pr-str (:segment enemy)))))
-    (events/listen timer goog.Timer/TICK #(draw-random-line context dims))
-    (. timer (start))
-  )))
