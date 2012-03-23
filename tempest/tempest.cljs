@@ -65,7 +65,9 @@
 ;;     - I'm not above making a custom rotary controller.
 ;;     - Two keys at the same time?  Gotta swirl-n-shoot.
 ;;   * Offset flat levels up more, instead of displaying them at the bottom.
-
+;;   * Rate-limit bullets
+;;   * Frame timing, and disassociate movement speed from framerate.
+;;
 
 ;; Path that defines player.
 (def player-path
@@ -152,7 +154,8 @@
    :stride 1
    :segment seg-idx
    :path-fn flipper-path-on-level
-   :level level})
+   :level level
+   :hits-remaining 1})
 
 (defn build-player
   "Returns a dictionary describing a player on the given level and segment."
@@ -161,19 +164,44 @@
    :level level
    :step (:steps level)})
 
+(defn entity-next-step
+  [entity]
+  (let [stride (:stride entity)
+        maxstep (:steps (:level entity))
+        newstep (+ stride (:step entity))]
+    (cond
+     (> newstep maxstep) maxstep
+     (< newstep 0) 0
+     :else newstep)))
+
+(defn test-entity-next-step []
+  (and
+   (= 11 (entity-next-step (build-enemy level 0 :step 10)))
+   (= 6 (entity-next-step (build-projectile level 0 -4 :step 10)))
+   (= 0 (entity-next-step (build-projectile level 0 -4 :step 0)))
+   (= 0 (entity-next-step (build-projectile level 0 -4 :step 2)))
+   (= 100 (entity-next-step (build-projectile level 0 4 :step 100)))
+   (= 100 (entity-next-step (build-projectile level 0 4 :step 98)))))
+
 (defn update-entity-position!
   "Return entity updated with a new position based on its current location and
    stride.  Won't go lower than 0, or higher than the maximum steps of the
    level."
-  [object]
-  (let [stride (:stride object)
-        maxstep (:steps (:level object))
-        newstep (+ stride (:step object))]
-    (cond
-     (> newstep maxstep) (assoc object :step maxstep)
-     (< newstep 0) (assoc object :step 0)
-     :else (assoc object :step newstep))))
+  [entity]
+  (assoc entity :step (entity-next-step entity)))
 
+(defn test-update-entity-position! []
+  (and 
+   (= 11 (:step (update-entity-position! (build-enemy level 0 :step 10))))
+   (= 5 (:step (update-entity-position!
+                (build-projectile level 0 -5 :step 10))))
+   (= 15 (:step (update-entity-position!
+                (build-projectile level 0 5 :step 10))))
+   (= 0 (:step (update-entity-position!
+                (build-projectile level 0 -5 :step 0))))
+   (= 100 (:step (update-entity-position!
+                  (build-projectile level 0 5 :step 100))))))
+  
 (defn update-entity-list
   "Recursively call update-entity-position! on all entities in list."
   [entity-list]
@@ -514,6 +542,52 @@
     [(apply #(step-length-line level %1 %2) line0)
      (apply #(step-length-line level %1 %2) line1)]))
 
+(defn entity-between-steps
+  "Returns true of entity is on seg-idx, and between steps step0 and step1,
+   inclusive."
+  [seg-idx step0 step1 entity]
+  (let [min (min step0 step1)
+        max (max step0 step1)]
+    (and
+     (= (:segment entity) seg-idx)
+     (>= (:step entity) min)
+     (<= (:step entity) max))))
+
+(defn test-entity-between-steps []
+  (and
+   (true? (entity-between-steps 0 0 10 (build-enemy level 0 :step 5)))
+   (false? (entity-between-steps 0 0 10 (build-enemy level 0 :step 15)))
+   (false? (entity-between-steps 0 0 10 (build-enemy level 1 :step 5)))
+   (false? (entity-between-steps 5 10 20 (build-enemy level 5 :step 5)))
+   (true? (entity-between-steps 5 10 20 (build-enemy level 5 :step 15)))
+  ))
+
+
+(defn collisions-with-projectile
+  "Returns map with keys true and false.  Values under true key have or
+   will collide with bullet in the next bullet update.  Values under the
+   false key will not."
+  [enemy-list bullet]
+  (group-by (partial entity-between-steps
+                   (:segment bullet)
+                   (:step bullet)
+                   (entity-next-step bullet))
+            enemy-list))
+
+(defn remove-collided-enemies!
+  [bullet]
+  (def *enemy-list*
+    (atom (get (collisions-with-projectile @*enemy-list* bullet) false))))
+
+;; TODO: decrement hits-remaining instead of deleting enemy
+
+(defn collisions-with-projectile-list
+  "Calls collisions-with-projectile for every projectile in bullet-list.
+   Returns a dictionary with true key for all enemies involved in a collision,
+   and a false key for all unaffected enemies."
+  [enemy-list bullet-list]
+  (doall (map remove-collided-enemies! bullet-list)))
+
 
 (defn draw-line
   "Draws a line on the given 2D context of an HTML5 canves element, between
@@ -558,7 +632,7 @@
    of an HTML5 canvas, with :height and :width specified in dims, and on the
    given level. TODO: This only draws flippers."
   [context dims level]
-  (doseq [enemy *enemy-list*]
+  (doseq [enemy @*enemy-list*]
     (.beginPath context)
     (draw-path context
                (polar-to-cartesian-centered (polar-entity-coord enemy) dims)
@@ -595,12 +669,15 @@
    (.clearRect context 0 0 (:width dims) (:height dims))
    (draw-board context dims level)
    (draw-player context dims level (deref *player*))
-   (draw-entities context dims level *enemy-list*)
+   (draw-entities context dims level @*enemy-list*)
    (draw-entities context dims level @*projectile-list*)
    (when (not @*paused*)
-     (def *enemy-list* (update-entity-list *enemy-list*))
+
+     (collisions-with-projectile-list @*enemy-list* @*projectile-list*)
+     
      (def *projectile-list* (atom (update-entity-list @*projectile-list*)))
      (def *projectile-list* (atom (vec (remove projectile-off-level? @*projectile-list*))))
+     (def *enemy-list* (atom (vec (update-entity-list @*enemy-list*))))
      )))
 
 (defn add-projectile
@@ -649,11 +726,13 @@
         dims {:width (.-width canvas) :height (.-height canvas)}]
     
     (def *enemy-list*
-      [(build-enemy level 0 :step 0)
-       (build-enemy level 3 :step 20)
-       ;;(build-enemy level 7 :step 80)
-       ;;(build-enemy level 8 :step 80)
-       (build-enemy level 11 :step 100)])
+      (atom
+       [(build-enemy level 0 :step 0)
+        (build-enemy level 1 :step 0)
+        (build-enemy level 3 :step 10)
+        (build-enemy level 7 :step 0)
+        (build-enemy level 8 :step 0)
+        (build-enemy level 11 :step 10)]))
     (def *player*
       (atom (doall (build-player level 7))))
     (def *projectile-list*
