@@ -22,16 +22,15 @@ Game logic is written in ClojureScript, backend is in Clojure with the Noir fram
 
 ## Usage
 
-### Compile ClojureScript (must have cljsc installed)
+### Compile ClojureScript
 
 ```bash
-cd tempest-cljs
-cljsc tempest '{:optimizations :simple :pretty-print true}' > resources/public/tempest.js
+lein deps
+lein cljsbuild once
 ```
 
 ### Run Jetty webserver hosting Noir app
 ```bash
-lein deps
 lein run
 ```
 
