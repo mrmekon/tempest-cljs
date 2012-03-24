@@ -208,7 +208,7 @@
   ((fn [oldlist newlist]
      (let [entity (first oldlist)]
        (if (nil? entity)
-         (vec newlist)
+         newlist
          (recur (rest oldlist)
                 (cons (update-entity-position! entity) newlist))))
          ) entity-list []))
@@ -574,6 +574,15 @@
                    (entity-next-step bullet))
             enemy-list))
 
+(defn remove-projectile
+  [bullet-list bullet]
+  (filter (not= bullet) bullet-list))
+
+(comment
+  ;; Remove a bullet from the *projectile-list* atom with swap!
+  (swap! *projectile-list* remove-projectile bullet)
+  )
+
 (defn remove-collided-enemies!
   [bullet]
   (def *enemy-list*
@@ -587,6 +596,7 @@
    and a false key for all unaffected enemies."
   [enemy-list bullet-list]
   (doall (map remove-collided-enemies! bullet-list)))
+
 
 
 (defn draw-line
@@ -676,8 +686,8 @@
      (collisions-with-projectile-list @*enemy-list* @*projectile-list*)
      
      (def *projectile-list* (atom (update-entity-list @*projectile-list*)))
-     (def *projectile-list* (atom (vec (remove projectile-off-level? @*projectile-list*))))
-     (def *enemy-list* (atom (vec (update-entity-list @*enemy-list*))))
+     (def *projectile-list* (atom (remove projectile-off-level? @*projectile-list*)))
+     (def *enemy-list* (atom (update-entity-list @*enemy-list*)))
      )))
 
 (defn add-projectile
@@ -685,8 +695,8 @@
   [level seg-idx stride step]
   (def *projectile-list*
     (atom
-     (vec (conj @*projectile-list*
-                (build-projectile level seg-idx stride :step step))))))
+     (conj @*projectile-list*
+           (build-projectile level seg-idx stride :step step)))))
 
 (defn keypress
   "Respond to keyboard key presses."
@@ -727,18 +737,20 @@
     
     (def *enemy-list*
       (atom
-       [(build-enemy level 0 :step 0)
+       (list
+        (build-enemy level 0 :step 0)
         (build-enemy level 1 :step 0)
         (build-enemy level 3 :step 10)
         (build-enemy level 7 :step 0)
         (build-enemy level 8 :step 0)
-        (build-enemy level 11 :step 10)]))
+        (build-enemy level 11 :step 10))))
     (def *player*
       (atom (doall (build-player level 7))))
     (def *projectile-list*
-      (atom [(build-projectile level 0 4)
+      (atom (list
+             (build-projectile level 0 4)
              (build-projectile level 8 -4 :step 100)
-             (build-projectile level 5 4 :step 100)]))
+             (build-projectile level 5 4 :step 100))))
 
     (events/listen timer goog.Timer/TICK #(draw-world context dims level))
     (events/listen handler "key" (fn [e] (keypress e)))
