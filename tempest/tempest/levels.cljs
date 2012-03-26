@@ -40,7 +40,7 @@
 (def ^{:doc "Default length function, returns argument*4"}
   *default-length-fn* #(* 4 %))
 
-(def *default-steps-per-segment* 100)
+(def *default-steps-per-segment* 200)
 
 (defn build-unlinked-segment-list [max-x]
   (vec ((fn [x segments]
@@ -262,4 +262,5 @@
     (make-level-entry *level4_lines* false)
     (make-level-entry *level5_lines* false)
     (make-level-entry *level6_lines* true)])
+
 

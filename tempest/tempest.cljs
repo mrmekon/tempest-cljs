@@ -7,7 +7,8 @@
             [goog.math :as math]
             [goog.events.KeyHandler :as key-handler]
             [goog.events.KeyCodes :as key-codes]
-            [clojure.browser.repl :as repl]))
+            [clojure.browser.repl :as repl])
+  (:require-macros [tempest.macros :as macros]))
 
 ;;
 ;;
@@ -82,24 +83,24 @@
    [44 164]])
 
 
-(def flipper-path
-  [[32 16]
-   [16 214]
-   [16 326]
-   [64 164]
-   [16 326]
-   [16 214]
-   [32 16]])
+;;(def flipper-path
+;;  [[32 16]
+;;   [16 214]
+;;   [16 326]
+;;   [64 164]
+;;   [16 326]
+;;   [16 214]
+;;   [32 16]])
 
-(def bullet-path
-  [[11.3 90]
-   [16 45]
-   [16 135]
-   [16 225]
-   [16 315]
-   ])
+;;(def bullet-path
+;;  [[11.3 90]
+;;   [16 45]
+;;   [16 135]
+;;   [16 225]
+;;   [16 315]
+;;   ])
 
-(defn round-path
+(defn round-path-math
   "Rounds all numbers in a path (vector of 2-tuples) to nearest integer."
   [path]
   (map (fn [coords]
@@ -107,31 +108,41 @@
           (js/Math.round (last coords))])
        path))
 
+(defn round-path-hack
+  "Rounds all numbers in a path (vector of 2-tuples) to nearest integer.
+   ONLY WORKS WITH POSITIVE NUMBERS.  Faster than round-path-math."
+  [path]
+  (map (fn [[x y]]
+         [(js* "~~" (+ 0.5 x))
+          (js* "~~" (+ 0.5 y))])
+       path))
+
+;; Use round-path-hack for now, since it's theoretically faster
+(def round-path round-path-hack)
+
 (defn flipper-path-with-width
   "Returns a path to draw a 'flipper' enemy with given width."
   [width]
   (let [r (/ width (js/Math.cos (util/deg-to-rad 16)))]
-    (round-path
-     [[0 0]
-      [(/ r 2) 16]
-      [(/ r 4) 214]
-      [(/ r 4) 326]
-      [r 164]
-      [(/ r 4) 326]
-      [(/ r 4) 214]
-      [(/ r 2) 16]])))
+    [[0 0]
+     [(/ r 2) 16]
+     [(/ r 4) 214]
+     [(/ r 4) 326]
+     [r 164]
+     [(/ r 4) 326]
+     [(/ r 4) 214]
+     [(/ r 2) 16]]))
 
 (defn projectile-path-with-width
   "Returns a path to draw a projectile with the given width."
   [width]
   (let [r (/ width (* 2 (js/Math.cos (util/deg-to-rad 45))))
         midheight (* r (js/Math.sin (util/deg-to-rad 45)))]
-    (round-path
-     [[midheight 270]
-      [r 45]
-      [r 135]
-      [r 225]
-      [r 315]])))
+    [[midheight 270]
+     [r 45]
+     [r 135]
+     [r 225]
+     [r 315]]))
 
 (defn build-projectile
   "Returns a dictionary describing a projectile (bullet) on the given level,
@@ -165,6 +176,8 @@
    :step (:steps level)})
 
 (defn entity-next-step
+  "Returns the next step position of given entity, taking into account
+   minimum and maximum positions of the level."
   [entity]
   (let [stride (:stride entity)
         maxstep (:steps (:level entity))
@@ -207,7 +220,7 @@
   [entity-list]
   ((fn [oldlist newlist]
      (let [entity (first oldlist)]
-       (if (nil? entity)
+       (if (empty? entity)
          newlist
          (recur (rest oldlist)
                 (cons (update-entity-position! entity) newlist))))
@@ -357,7 +370,7 @@
   (do
     (.moveTo context (first origin) (last origin))    
     ((fn [origin vecs skip?]
-       (if (nil? vecs)
+       (if (empty? vecs)
          nil
          (let [line (first vecs)
                point (rebase-origin (polar-to-cartesian-coords line) origin)]
@@ -563,6 +576,100 @@
   ))
 
 
+(defn projectiles-after-collision
+  "Given an entity and a list of projectiles, returns the entity and updated
+   list of projectiles after collisions.  The entity's hits-remaining counter
+   is decremented on a collision, and the projectile is removed."
+  [entity projectile-list]
+  ((fn [entity projectiles-in projectiles-out was-hit?]
+     (if (empty? projectiles-in)
+       {:entity entity :projectiles projectiles-out :was-hit? was-hit?}
+       (let [bullet (first projectiles-in)
+             collision? (entity-between-steps
+                         (:segment bullet)
+                         (:step bullet)
+                         (entity-next-step bullet)
+                         entity)]
+         (if collision?
+           (recur (decrement-enemy-hits entity)
+                  nil
+                  (concat projectiles-out (rest projectiles-in))
+                  true)
+           (recur entity
+                  (rest projectiles-in)
+                  (cons bullet projectiles-out)
+                  was-hit?)))))
+   entity projectile-list '() false))
+
+(defn test-projectiles-after-collision []
+  (let [level (get levels/*levels* 4)
+        projectiles (list (build-projectile level 0 -1 :step 9)
+                          (build-projectile level 0 -5 :step 9)
+                          (build-projectile level 0 1 :step 9)
+                          (build-projectile level 0 2 :step 9)
+                          (build-projectile level 0 5 :step 20)
+                          (build-projectile level 5 2 :step 9))
+        result (projectiles-after-collision
+                (build-enemy level 0 :step 10)
+                projectiles)]
+    (println (str "Projectiles: "
+                  (pr-str (count (:projectiles result)))
+                  " of "
+                  (pr-str (count projectiles))))
+    (println (str "Hits left: " (pr-str (:hits-remaining (:entity result)))))
+    (println (str "Was hit: " (pr-str (:was-hit? result))))
+     ))
+
+(defn entities-after-collisions
+  "Given a list of entities and a list of projectiles, returns the lists
+   with entity hit counts updated, entities removed if they have no hits
+   remaining, and collided projectiles removed.
+
+   See projectiles-after-collision, which is called for each entity in
+   entity-list."
+  [entity-list projectile-list]
+  ((fn [entities-in entities-out projectiles-in]
+     (if (empty? entities-in)
+       {:entities entities-out :projectiles projectiles-in}
+       (let [{entity :entity projectiles :projectiles was-hit? :was-hit?}
+             (projectiles-after-collision (first entities-in)
+                                          projectiles-in)]
+         (if (and was-hit? (<= (:hits-remaining entity) 0))
+           (recur (rest entities-in)
+                  entities-out
+                  projectiles)
+           (recur (rest entities-in)
+                  (cons entity entities-out)
+                  projectiles)))))
+   entity-list '() projectile-list))
+
+(defn test-entities-after-collisions []
+  (let [level (get levels/*levels* 4)
+        enemies (list (build-enemy level 0 :step 10)
+                      (build-enemy level 1 :step 20)
+                      (build-enemy level 2 :step 30)
+                      (build-enemy level 3 :step 40)
+                      (build-enemy level 4 :step 50)
+                      (build-enemy level 5 :step 60))
+        projectiles (list (build-projectile level 0 -5 :step 9)
+                          (build-projectile level 0 5 :step 9)
+                          (build-projectile level 1 -5 :step 19)
+                          (build-projectile level 1 5 :step 19)
+                          (build-projectile level 3 -5 :step 35)
+                          (build-projectile level 3 5 :step 35))
+        result (entities-after-collisions enemies projectiles)]
+    (println (str "Entities: "
+                  (pr-str (count (:entities result)))
+                  " of "
+                  (pr-str (count enemies))))
+    (println (str "Projectiles: "
+                  (pr-str (count (:projectiles result)))
+                  " of "
+                  (pr-str (count projectiles))))
+    ))
+
+
+
 (defn collisions-with-projectile
   "Returns map with keys true and false.  Values under true key have or
    will collide with bullet in the next bullet update.  Values under the
@@ -574,28 +681,29 @@
                    (entity-next-step bullet))
             enemy-list))
 
-(defn remove-projectile
-  [bullet-list bullet]
-  (filter (not= bullet) bullet-list))
 
-(comment
-  ;; Remove a bullet from the *projectile-list* atom with swap!
-  (swap! *projectile-list* remove-projectile bullet)
-  )
+(defn decrement-enemy-hits
+  "Decrement hits-remaining count on given enemy."
+  [enemy]
+  (assoc enemy :hits-remaining (dec (:hits-remaining enemy))))
 
+
+
+;;
+;; Old, replaced collision detection code
+;;
 (defn remove-collided-enemies!
   [bullet]
   (def *enemy-list*
     (atom (get (collisions-with-projectile @*enemy-list* bullet) false))))
-
-;; TODO: decrement hits-remaining instead of deleting enemy
-
 (defn collisions-with-projectile-list
   "Calls collisions-with-projectile for every projectile in bullet-list.
    Returns a dictionary with true key for all enemies involved in a collision,
    and a false key for all unaffected enemies."
   [enemy-list bullet-list]
   (doall (map remove-collided-enemies! bullet-list)))
+
+
 
 
 
@@ -620,7 +728,7 @@
                          (polar-to-cartesian-centered
                           (polar-entity-coord player)
                           dims)))
-               (player-path-on-level player)
+               (round-path (player-path-on-level player))
                true)
     (.closePath context)))
 
@@ -633,7 +741,7 @@
     (.beginPath context)
     (draw-path context
                (polar-to-cartesian-centered (polar-entity-coord entity) dims)
-               ((:path-fn entity) entity)
+               (round-path ((:path-fn entity) entity))
                true)
     (.closePath context)))
 
@@ -643,7 +751,7 @@
    given level. TODO: This only draws flippers."
   [context dims level]
   (doseq [enemy @*enemy-list*]
-    (.beginPath context)
+    (.beginPath context)                           
     (draw-path context
                (polar-to-cartesian-centered (polar-entity-coord enemy) dims)
                (flipper-path-on-level enemy)
@@ -656,11 +764,11 @@
   [context dims level]
   (doseq []
    (.beginPath context)
-    (doseq [idx (range (count (:segments level)))]
+   (doseq [idx (range (count (:segments level)))]
       (draw-rectangle
        context
-       (rectangle-to-canvas-coords
-        dims (rectangle-for-segment level idx))))
+       (round-path (rectangle-to-canvas-coords
+        dims (rectangle-for-segment level idx)))))
     (.closePath context)))
 
 (defn projectile-off-level?
@@ -671,24 +779,41 @@
    (>= (:step projectile) (:steps (:level projectile))) true
    :else false))
 
+
 (defn draw-world
   "Call all of the drawing functions to redraw the scene, and update all
    of the entities on the level."
   [context dims level]
   (doseq []
-   (.clearRect context 0 0 (:width dims) (:height dims))
-   (draw-board context dims level)
-   (draw-player context dims level (deref *player*))
-   (draw-entities context dims level @*enemy-list*)
-   (draw-entities context dims level @*projectile-list*)
-   (when (not @*paused*)
-
-     (collisions-with-projectile-list @*enemy-list* @*projectile-list*)
-     
-     (def *projectile-list* (atom (update-entity-list @*projectile-list*)))
-     (def *projectile-list* (atom (remove projectile-off-level? @*projectile-list*)))
-     (def *enemy-list* (atom (update-entity-list @*enemy-list*)))
-     )))
+    (.clearRect context 0 0 (:width dims) (:height dims))
+    (draw-board context dims level)
+    (draw-player context dims level (deref *player*))
+    (draw-entities context dims level @*enemy-list*)
+    (draw-entities context dims level @*projectile-list*)
+    
+    (when (not @*paused*)
+      (let [new-entities (entities-after-collisions @*enemy-list*
+                                                    @*projectile-list*)]
+        (def *projectile-list* (atom (:projectiles new-entities)))
+        (def *enemy-list* (atom (:entities new-entities))))
+        
+;;      (collisions-with-projectile-list @*enemy-list* @*projectile-list*)
+      
+      (def *projectile-list* (atom (update-entity-list @*projectile-list*)))
+      (def *projectile-list* (atom (remove projectile-off-level?
+                                           @*projectile-list*)))
+      (def *enemy-list* (atom (update-entity-list @*enemy-list*))))
+    
+    (def *frame-count* (atom (inc @*frame-count*)))
+    (when (= 20 @*frame-count*)
+      (let [fps (/ (* 1000 @*frame-count*)
+                   (- (goog.now) @*frame-time*))]
+        (.log js/console (str "FPS: " (pr-str fps)))
+        (dom/setTextContent (dom/getElement "fps")
+                            (str "FPS: " (pr-str (js/Math.round fps)))))
+      
+      (def *frame-count* (atom 0))
+      (def *frame-time* (atom (goog.now))))))
 
 (defn add-projectile
   "Add a new projectile to the global list of live projectiles."
@@ -728,30 +853,61 @@
    of an integer."
   [level]
   (let [document (dom/getDocument)
-        timer (goog.Timer. 50)
+        timer (goog.Timer. 20)
         level (get levels/*levels* (- (js/parseInt level) 1))
         canvas (dom/getElement "canv1")
         context (.getContext canvas "2d")
         handler (goog.events.KeyHandler. document)
         dims {:width (.-width canvas) :height (.-height canvas)}]
-    
+
+    (def *frame-count* (atom 0))
+    (def *frame-time* (atom (goog.now)))
+
     (def *enemy-list*
       (atom
        (list
         (build-enemy level 0 :step 0)
         (build-enemy level 1 :step 0)
+        (build-enemy level 1 :step 10)
+        (build-enemy level 1 :step 20)
+        (build-enemy level 1 :step 30)
+        (build-enemy level 1 :step 40)
+        (build-enemy level 1 :step 50)
+        (build-enemy level 1 :step 60)
+        (build-enemy level 1 :step 70)
+        (build-enemy level 3 :step 0)
         (build-enemy level 3 :step 10)
+        (build-enemy level 3 :step 20)
+        (build-enemy level 3 :step 30)
+        (build-enemy level 3 :step 40)
+        (build-enemy level 3 :step 50)
+        (build-enemy level 3 :step 60)
+        (build-enemy level 3 :step 70)
         (build-enemy level 7 :step 0)
+        (build-enemy level 7 :step 10)
+        (build-enemy level 7 :step 20)
+        (build-enemy level 7 :step 30)
+        (build-enemy level 7 :step 40)
+        (build-enemy level 7 :step 50)
         (build-enemy level 8 :step 0)
+        (build-enemy level 8 :step 10)
+        (build-enemy level 8 :step 20)
+        (build-enemy level 8 :step 30)
+        (build-enemy level 8 :step 40)
+        (build-enemy level 8 :step 50)
+        (build-enemy level 8 :step 60)
         (build-enemy level 11 :step 10))))
     (def *player*
       (atom (doall (build-player level 7))))
     (def *projectile-list*
-      (atom (list
-             (build-projectile level 0 4)
-             (build-projectile level 8 -4 :step 100)
-             (build-projectile level 5 4 :step 100))))
+      (atom (list)))
 
+    (macros/fntime (.log js/console (str "Hey log")))
+    
+    (comment (build-projectile level 0 4)
+             (build-projectile level 8 -4 :step 100)
+             (build-projectile level 5 4 :step 100))
+    
     (events/listen timer goog.Timer/TICK #(draw-world context dims level))
     (events/listen handler "key" (fn [e] (keypress e)))
     (. timer (start))))

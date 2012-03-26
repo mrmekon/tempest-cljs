@@ -11,8 +11,8 @@
 (defpage "/tempest/:level" {:keys [level]}
   (common/site-layout
    (include-js "/tempest.js")
-   [:h2 "TEMPEST... IN CLOJURESCRIPT"]
    [:canvas#canv1 {:width "900" :height "900"}]
+   [:p#fps "FPS 0.0"]
    (javascript-tag (str "tempest.canvasDraw(" (pr-str level) ");"))
    ))
 
