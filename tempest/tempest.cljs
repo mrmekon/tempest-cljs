@@ -786,7 +786,7 @@
   [context dims level]
   (doseq []
     (.clearRect context 0 0 (:width dims) (:height dims))
-    (draw-board context dims level)
+    ;;(draw-board context dims level)
     (draw-player context dims level (deref *player*))
     (draw-entities context dims level @*enemy-list*)
     (draw-entities context dims level @*projectile-list*)
@@ -855,11 +855,15 @@
   (let [document (dom/getDocument)
         timer (goog.Timer. 20)
         level (get levels/*levels* (- (js/parseInt level) 1))
-        canvas (dom/getElement "canv1")
+        canvas (dom/getElement "canv-fg")
         context (.getContext canvas "2d")
+        bgcanvas (dom/getElement "canv-bg")
+        bgcontext (.getContext bgcanvas "2d")
         handler (goog.events.KeyHandler. document)
         dims {:width (.-width canvas) :height (.-height canvas)}]
 
+    (draw-board bgcontext dims level)
+    
     (def *frame-count* (atom 0))
     (def *frame-time* (atom (goog.now)))
 
