@@ -1,7 +1,8 @@
 (defproject tempest-cljs "0.1.0-SNAPSHOT"
-            :description "FIXME: write this!"
+            :description "Clone of Tempest vector-graphic arcade game."
             :dependencies [[org.clojure/clojure "1.3.0"]
                            [noir "1.2.1"]]
+            :dev-dependencies [[lein-marginalia "0.7.0-SNAPSHOT"]]
             :plugins [[lein-cljsbuild "0.1.3"]]
             :cljsbuild {
               :builds [{:source-path "tempest"

@@ -13,6 +13,7 @@
 ;;
 ;;
 ;; Rough design notes:
+;;
 ;;  * Nearly everything is defined with polar coordinates (length and angle)
 ;;  * "Entities" are players, enemies, projectiles
 ;;  * "Entities" are defined by a path, a series of polar coordinates, that
@@ -28,6 +29,7 @@
 ;;    towards the player.
 ;;
 ;; Obscure design oddities:
+;;
 ;;  * draw-path can optionally follow, but not draw, the first line of an
 ;;    entity's path.  There is a crazy reason for this.  The 'center' of
 ;;    an entity when drawn ends up being the first point drawn.  The first
@@ -46,6 +48,7 @@
 
 ;;
 ;; TODO:
+;;
 ;;   * BUG: there's an extra segment at the top of level 6 with no width
 ;;   * Bullet updates should check if they hit or passed over an enemy
 ;;   * Flippers should.. flip.
@@ -850,11 +853,12 @@
 
 (defn animationFrameMethod []
   (let [window (dom/getWindow)
-        options (list #(.-requestAnimationFrame window)
-                      #(.-webkitRequestAnimationFrame window)
-                      #(.-mozRequestAnimationFrame window)
-                      #(.-oRequestAnimationFrame window)
-                      #(.-msRequestAnimationFrame window))]
+        names ["requestAnimationFrame"
+               "webkitRequestAnimationFrame"
+               "mozRequestAnimationFrame"
+               "oRequestAnimationFrame"
+               "msRequestAnimationFrame"]
+        options (map (fn [name] #(aget window name)) names)]
     ((fn [[current & remaining]]
        (cond
         (nil? current) #((.-setTimeout window) % (/ 1000 30))
