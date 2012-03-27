@@ -850,15 +850,15 @@
 
 (defn animationFrameMethod []
   (let [window (dom/getWindow)
-        options (list (.-requestAnimationFrame window)
-                      (.-webkitRequestAnimationFrame window)
-                      (.-mozRequestAnimationFrame window)
-                      (.-oRequestAnimationFrame window)
-                      (.-msRequestAnimationFrame window))]
+        options (list #(.-requestAnimationFrame window)
+                      #(.-webkitRequestAnimationFrame window)
+                      #(.-mozRequestAnimationFrame window)
+                      #(.-oRequestAnimationFrame window)
+                      #(.-msRequestAnimationFrame window))]
     ((fn [[current & remaining]]
        (cond
-        (nil? current) #((.-setInterval window) % (/ 1000 60))
-        (fn? current) current
+        (nil? current) #((.-setTimeout window) % (/ 1000 30))
+        (fn? (current)) (current)
         :else (recur remaining)))
      options)))
 
@@ -880,6 +880,8 @@
         handler (goog.events.KeyHandler. document)
         dims {:width (.-width canvas) :height (.-height canvas)}]
 
+    (.log js/console (str "Animation function: " (pr-str *animMethod*)))
+    
     (draw-board bgcontext dims level)
     
     (def *frame-count* (atom 0))
@@ -926,7 +928,6 @@
     
     (*animMethod* #(draw-world context dims level))
 
-    (events/listen handler "key" (fn [e] (keypress e)))
-    (. timer (start))))
+    (events/listen handler "key" (fn [e] (keypress e)))))
 
     
