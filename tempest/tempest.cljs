@@ -42,7 +42,7 @@
 ;;
 
 
-;;(repl/connect "http://localhost:9000/repl")
+(repl/connect "http://localhost:9000/repl")
 
 ;;
 ;; TODO:
@@ -105,7 +105,7 @@
   [path]
   (map (fn [coords]
          [(js/Math.round (first coords))
-          (js/Math.round (last coords))])
+          (js/Math.round (peek coords))])
        path))
 
 (defn round-path-hack
@@ -230,14 +230,14 @@
   "Return a polar coordinate with the first element (radius) scaled using
    the function scalefn"
   [scalefn coord]
-  [(scalefn (first coord)) (last coord)])
+  [(scalefn (first coord)) (peek coord)])
 
 (defn rotate-path
   "Add angle to all polar coordinates in path."
   [angle path]
   (map (fn [coords]
          [(first coords)
-          (mod (+ angle (last coords)) 360)])
+          (mod (+ angle (peek coords)) 360)])
        path))
 
 (defn scale-path
@@ -245,7 +245,7 @@
   [scale path]
   (map (fn [coords]
          [(* scale (first coords))
-          (last coords)])
+          (peek coords)])
        path))
 
 (defn polar-extend
@@ -368,15 +368,15 @@
   "
   [context origin vecs skipfirst?]
   (do
-    (.moveTo context (first origin) (last origin))    
+    (.moveTo context (first origin) (peek origin))    
     ((fn [origin vecs skip?]
        (if (empty? vecs)
          nil
          (let [line (first vecs)
                point (rebase-origin (polar-to-cartesian-coords line) origin)]
            (if-not skip?
-             (.lineTo context (first point) (last point))
-             (.moveTo context (first point) (last point)))
+             (.lineTo context (first point) (peek point))
+             (.moveTo context (first point) (peek point)))
            (recur point (next vecs) false))))
      origin vecs skipfirst?)
     (.stroke context)))
@@ -449,6 +449,7 @@
   (apply polar-midpoint
          (polar-lines-for-segment level seg-idx scaled?)))
 
+
 (defn polar-lines-for-segment
   "Returns vector [line0 line1], where lineN is a polar coordinate describing
    the line from origin (canvas midpoint) that would draw the edges of a level
@@ -468,7 +469,7 @@
       [(scale-polar-coord (:length-fn level) line0)
        (scale-polar-coord (:length-fn level) line1)]
       [line0 line1]
-    )))
+      )))
 
 (defn rectangle-for-segment
   "Returns vector [[x0 y0] [x1 y1] [x2 y2] [x3 y3]] describing segment's
@@ -491,7 +492,7 @@
   [{width :width height :height} p]
   (let [xmid (/ width 2)
         ymid (/ height 2)]
-    [(+ (first p) xmid) (- ymid (last p))]
+    [(+ (first p) xmid) (- ymid (peek p))]
   ))
 
 (defn rectangle-to-canvas-coords
@@ -507,10 +508,10 @@
   "Draws a rectangle (4 cartesian coordinates in a vector) on the 2D context
    of an HTML5 canvas."
   [context [p0 & points]]
-  (.moveTo context (first p0) (last p0))
+  (.moveTo context (first p0) (peek p0))
   (doseq [p points]
-    (.lineTo context (first p) (last p)))
-  (.lineTo context (first p0) (last p0))
+    (.lineTo context (first p) (peek p)))
+  (.lineTo context (first p0) (peek p0))
   (.stroke context)
   )
 
@@ -786,6 +787,9 @@
   [context dims level]
   (doseq []
     (.clearRect context 0 0 (:width dims) (:height dims))
+    (comment (.clearRect context
+                (/ (:width dims) 4) (/ (:height dims) 4)
+                (/ (:width dims) 2) (/ (:height dims) 2)))
     ;;(draw-board context dims level)
     (draw-player context dims level (deref *player*))
     (draw-entities context dims level @*enemy-list*)
@@ -797,18 +801,16 @@
         (def *projectile-list* (atom (:projectiles new-entities)))
         (def *enemy-list* (atom (:entities new-entities))))
         
-;;      (collisions-with-projectile-list @*enemy-list* @*projectile-list*)
-      
       (def *projectile-list* (atom (update-entity-list @*projectile-list*)))
       (def *projectile-list* (atom (remove projectile-off-level?
                                            @*projectile-list*)))
-      (def *enemy-list* (atom (update-entity-list @*enemy-list*))))
+      (def *enemy-list* (atom (update-entity-list @*enemy-list*)))
+      (*animMethod* #(draw-world context dims level)))
     
     (def *frame-count* (atom (inc @*frame-count*)))
     (when (= 20 @*frame-count*)
       (let [fps (/ (* 1000 @*frame-count*)
                    (- (goog.now) @*frame-time*))]
-        (.log js/console (str "FPS: " (pr-str fps)))
         (dom/setTextContent (dom/getElement "fps")
                             (str "FPS: " (pr-str (js/Math.round fps)))))
       
@@ -846,7 +848,24 @@
           nil
           )))
 
+(defn animationFrameMethod []
+  (let [options (list #(.-requestAnimationFrame (dom/getWindow))
+                      #(.-webkitRequestAnimationFrame (dom/getWindow))
+                      #(.-mozRequestAnimationFrame (dom/getWindow))
+                      #(.-oRequestAnimationFrame (dom/getWindow))
+                      #(.-msRequestAnimationFrame (dom/getWindow))
+                      #(.-setInterval (dom/getWindow)))]
+    ((fn [[current & remaining]]
+       (if (nil? current)
+         nil
+         (if (fn? (current))
+           (current)
+           (recur remaining)))) options)))
+              
+
 (def *paused* (atom false))
+
+(def *animMethod* (animationFrameMethod))
 
 (defn ^:export canvasDraw
   "Begins a camge of tempest.  'level' specified as a string representation
@@ -905,14 +924,10 @@
       (atom (doall (build-player level 7))))
     (def *projectile-list*
       (atom (list)))
+    
+    (*animMethod* #(draw-world context dims level))
 
-    (macros/fntime (.log js/console (str "Hey log")))
-    
-    (comment (build-projectile level 0 4)
-             (build-projectile level 8 -4 :step 100)
-             (build-projectile level 5 4 :step 100))
-    
-    (events/listen timer goog.Timer/TICK #(draw-world context dims level))
     (events/listen handler "key" (fn [e] (keypress e)))
     (. timer (start))))
 
+    
