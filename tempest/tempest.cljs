@@ -849,19 +849,18 @@
           )))
 
 (defn animationFrameMethod []
-  (let [options (list #(.-requestAnimationFrame (dom/getWindow))
-                      #(.-webkitRequestAnimationFrame (dom/getWindow))
-                      #(.-mozRequestAnimationFrame (dom/getWindow))
-                      #(.-oRequestAnimationFrame (dom/getWindow))
-                      #(.-msRequestAnimationFrame (dom/getWindow))
-                      #(.-setInterval (dom/getWindow)))]
+  (let [window (dom/getWindow)
+        options (list (.-requestAnimationFrame window)
+                      (.-webkitRequestAnimationFrame window)
+                      (.-mozRequestAnimationFrame window)
+                      (.-oRequestAnimationFrame window)
+                      (.-msRequestAnimationFrame window))]
     ((fn [[current & remaining]]
-       (if (nil? current)
-         nil
-         (if (fn? (current))
-           (current)
-           (recur remaining)))) options)))
-              
+       (cond
+        (nil? current) #((.-setInterval window) % (/ 1000 60))
+        (fn? current) current
+        :else (recur remaining)))
+     options)))
 
 (def *paused* (atom false))
 
