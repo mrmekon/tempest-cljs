@@ -1,37 +1,42 @@
-(ns tempest.levels
+(ns ^{:doc "
+Functions related to generating paths representing levels.
+"}
+  tempest.levels
   (:require [tempest.util :as util]))
 
-;;;;
-;;;; Levels are defined by a vector of polar coordinates [r theta],
-;;;; which are used to build a vector of 'segments' that form a level.
-;;;;
-;;;; Levels can be manually specified by building a vector of lines
-;;;; manually.
-;;;;
-;;;; Some types of levels can be built automatically by calling helper
-;;;; functions in this module with various parameters.
-;;;;
-;;;; Levels are drawn radially, from the center point of the canvas.
-;;;;
-;;;; Levels are stored in the *levels* vector as a list of maps.
-;;;;
-;;;; Terminology in this module:
-;;;;
-;;;; "length" and "depth" both refer to how far from origin the inner
-;;;; line is drawn, in pixels.
-;;;;
-;;;; "length-fn" is a function to determine how long between inner and
-;;;; outer line.  Takes one argument 'r' to the inner line.  Returns
-;;;; 'r' to the outer line.  Default is 'inner r' multiplied by 4.
-;;;;
-;;;; "width" is how wide, in pixels, the outer line segment is.
-;;;;
-;;;;
-;;;; Enemies travel up segments in steps.  A level has the same number
-;;;; of steps per segment, but the size of the steps can vary depending
-;;;; on the dimensions of the segment.  Instead of keeping track of its
-;;;; coordinates, an enemy keeps track of which segment it is on, and
-;;;; how many steps up the segment.
+;;
+;; ## Level Terminology:
+;;
+;; *length* and *depth* both refer to how far from origin the inner
+;; line is drawn, in pixels.
+;;
+;; *length-fn* is a function to determine how long between inner and
+;; outer line.  Takes one argument 'r' to the inner line.  Returns
+;; 'r' to the outer line.  Default is 'inner r' multiplied by 4.
+;;
+;; *width* is how wide, in pixels, the outer line segment is.
+;;
+;; ## Level design
+;;
+;; Levels are defined by a vector of polar coordinates [r theta],
+;; which are used to build a vector of 'segments' that form a level.
+;;
+;; Levels can be manually specified by building a vector of lines
+;; manually.
+;;
+;; Some types of levels can be built automatically by calling helper
+;; functions in this module with various parameters.
+;;
+;; Levels are drawn radially, from the center point of the canvas.
+;;
+;; Levels are stored in the \*levels\* vector as a list of maps.
+;;
+;; Enemies travel up segments in steps.  A level has the same number
+;; of steps per segment, but the size of the steps can vary depending
+;; on the dimensions of the segment.  Instead of keeping track of its
+;; coordinates, an enemy keeps track of which segment it is on, and
+;; how many steps up the segment.
+;;
 
 
 (def ^{:doc "Default length, in pixels, from origin to inner line."}
@@ -60,18 +65,18 @@
 
 
 
-;; "Flat" level functions follow:
+;; ## "Flat" level functions
 ;;
 ;; Functions for generating "flat" levels: levels where the edge appears as
 ;; a straight line.  Something like this garbage:
 ;;
-;;       ___________________________
-;;      /  /  / |  |  |  |  |   \   \
-;;     /  |  |  |  |  |  |   |   \   \
-;;    /  /  |  |   |  |   |   |   |   \
-;;   /  /  /   |  |   |   |   |    |   \
-;;  /  /  /   |   |   |   |    |    |   \
-;; ----------------------------------------
+;;           ___________________________
+;;          /  /  / |  |  |  |  |   \   \
+;;         /  |  |  |  |  |  |   |   \   \
+;;        /  /  |  |   |  |   |   |   |   \
+;;       /  /  /   |  |   |   |   |    |   \
+;;      /  /  /   |   |   |   |    |    |   \
+;;     ----------------------------------------
 ;;
 ;; Flat levels always start with a line dropped straight down, and build
 ;; out symmetrically from there.  The width of segments at the "outer" edge
@@ -111,21 +116,23 @@
 
 
 
-;; "Oblong" level functions follow:
+;; ## "Oblong" level functions
 ;;
 ;; Functions for generating oblong triangles using Law of Cosines.
 ;; Use to generate arbitrary levels from a list of angles, gamma(0)..gamma(N),
-;; where gamma is the angle between the previous line segment 'towards the player'
-;; and the line segment that makes the 'width' of the segment.
-;;             ____
-;;            /    / \
-;;           /    /   \ 
-;;          /    /     /
-;;         /    /     /
-;; gamma1-/->  /     /
-;;       /____/     /
-;;             \  </--- gamma0
-;;              \ /
+;; where gamma is the angle between the previous line segment 'towards the
+;; player' and the line segment that makes the 'width' of the segment.
+;;
+;;                   ____
+;;                  /    / \
+;;                 /    /   \ 
+;;                /    /     /
+;;               /    /     /
+;;       gamma1-/->  /     /
+;;             /____/     /
+;;                   \  </--- gamma0
+;;                    \ /
+;;      
 ;;
 ;; Named 'oblong' after the triangles formed when the lines are extended to origin.
 ;; As opposed to the flat-levels, which are constructed of right triangles.
@@ -190,15 +197,9 @@
 
 
 
-
-
-
 ;;
 ;;
-;; BELOW HERE ARE LEVELS
-;;
-;;
-;;
+;; ## BELOW HERE ARE LEVEL DEFINITIONS
 ;;
 ;;
 
