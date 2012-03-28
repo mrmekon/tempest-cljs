@@ -251,6 +251,7 @@
    the level is a closed loop, or open."
   [lines loops?]
   {:lines lines
+   :loops? loops?
    :segments (build-segment-list (- (count lines) 1) loops?)
    :length-fn *default-length-fn*
    :steps *default-steps-per-segment*})

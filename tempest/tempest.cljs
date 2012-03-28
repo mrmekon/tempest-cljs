@@ -86,22 +86,6 @@
    [44 164]])
 
 
-;;(def flipper-path
-;;  [[32 16]
-;;   [16 214]
-;;   [16 326]
-;;   [64 164]
-;;   [16 326]
-;;   [16 214]
-;;   [32 16]])
-
-;;(def bullet-path
-;;  [[11.3 90]
-;;   [16 45]
-;;   [16 135]
-;;   [16 225]
-;;   [16 315]
-;;   ])
 
 (defn round-path-math
   "Rounds all numbers in a path (vector of 2-tuples) to nearest integer."
@@ -120,6 +104,11 @@
           (js* "~~" (+ 0.5 y))])
        path))
 
+(defn round
+  "Perform quick rounding of given number.  ONLY WORKS WITH POSITIVE NUMBERS."
+  [num]
+  (js* "~~" (+ 0.5 num)))
+
 ;; Use round-path-hack for now, since it's theoretically faster
 (def round-path round-path-hack)
 
@@ -135,6 +124,7 @@
      [(/ r 4) 326]
      [(/ r 4) 214]
      [(/ r 2) 16]]))
+
 
 (defn projectile-path-with-width
   "Returns a path to draw a projectile with the given width."
@@ -176,7 +166,8 @@
   [level seg-idx]
   {:segment seg-idx
    :level level
-   :step (:steps level)})
+   :step (:steps level)
+   :bullet-stride -5})
 
 (defn entity-next-step
   "Returns the next step position of given entity, taking into account
@@ -820,36 +811,64 @@
       (def *frame-count* (atom 0))
       (def *frame-time* (atom (goog.now))))))
 
-(defn add-projectile
-  "Add a new projectile to the global list of live projectiles."
-  [level seg-idx stride step]
-  (def *projectile-list*
-    (atom
-     (conj @*projectile-list*
-           (build-projectile level seg-idx stride :step step)))))
+(defn add-player-projectile!
+  "Add a new projectile to the global list of live projectiles, originating
+   from the given player, on the segment he is currently on."
+  [player]
+  (let [level (:level player)
+        seg-idx (:segment player)
+        stride (:bullet-stride player)
+        step (:steps level)]
+    (reset! *projectile-list*
+            (conj @*projectile-list*
+                  (build-projectile level seg-idx stride :step step)))))
+
+(defn segment-player-left
+  "Returns the segment to the left of the player.  Loops around the level
+   on connected levels, and stops at 0 on unconnected levels."
+  [player]
+  (let [level (:level player)
+        seg-max (dec (count (:segments level)))
+        cur-seg (:segment player)
+        loops? (:loops? level)
+        new-seg (dec cur-seg)]
+    (if (< new-seg 0)
+      (if loops? seg-max 0)
+      new-seg)))
+
+
+(defn segment-player-right
+  "Returns the segment to the right of the player.  Loops around the level
+   on connected levels, and stops at max on unconnected levels."
+  [player]
+  (let [level (:level player)
+        seg-max (dec (count (:segments level)))
+        cur-seg (:segment player)
+        loops? (:loops? level)
+        new-seg (inc cur-seg)]
+    (if (> new-seg seg-max)
+      (if loops? 0 seg-max)
+      new-seg)))
+
+(defn set-global-player-segment!
+  "Sets global *player*'s segment key to a new value."
+  [seg-idx]
+  (reset! *player* (assoc @*player* :segment seg-idx)))
 
 (defn keypress
   "Respond to keyboard key presses."
   [event]
   (let [player @*player*
-        level (:level player)
-        seg-count (count (:segments level))
-        segment (:segment player)
         key (.-keyCode event)]
     (condp = key
-          key-codes/RIGHT (def *player*
-                           (atom
-                            (assoc @*player* :segment
-                                   (mod (+ segment 1) seg-count))))
-          key-codes/LEFT (def *player*
-                           (atom
-                            (assoc @*player* :segment
-                                   (mod (+ (- segment 1) seg-count)
-                                        seg-count))))
-          key-codes/SPACE (add-projectile level segment -5 (:steps level))
-          key-codes/ESC (def *paused* (atom (not @*paused*)))
-          nil
-          )))
+      key-codes/RIGHT (set-global-player-segment!
+                       (segment-player-right player))
+      key-codes/LEFT (set-global-player-segment!
+                      (segment-player-left player))
+      key-codes/SPACE (add-player-projectile! player)
+      key-codes/ESC (def *paused* (atom (not @*paused*)))
+      nil
+      )))
 
 (defn animationFrameMethod []
   (let [window (dom/getWindow)
