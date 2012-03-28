@@ -3028,18 +3028,22 @@ net.brehaut.ClojureTools = (function (SH) {
     build_tree: build_tree
   };
 })(SyntaxHighlighter);
-</script><title>tempest-cljs -- Marginalia</title></head><body><table><tr><td class="docs"><div class="header"><h1 class="project-name">tempest-cljs</h1><h2 class="project-version">0.1.0-SNAPSHOT</h2><br /><p>Clone of Tempest vector-graphic arcade game.</p>
-</div><div class="dependencies"><h3>dependencies</h3><table><tr><td class="dep-name">org.clojure/clojure</td><td class="dotted"><hr /></td><td class="dep-version">1.3.0</td></tr><tr><td class="dep-name">noir</td><td class="dotted"><hr /></td><td class="dep-version">1.2.1</td></tr></table></div><div class="dependencies"><h3>dev dependencies</h3><table><tr><td class="dep-name">lein-marginalia</td><td class="dotted"><hr /></td><td class="dep-version">0.7.0-SNAPSHOT</td></tr></table></div></td><td class="codes" style="text-align: center; vertical-align: middle;color: #666;padding-right:20px"><br /><br /><br />(this space intentionally left almost blank)</td></tr><tr><td class="docs"><div class="toc"><a name="toc"><h3>namespaces</h3></a><ul><li><a href="#tempest.macros">tempest.macros</a></li><li><a href="#tempest">tempest</a></li><li><a href="#tempest.levels">tempest.levels</a></li><li><a href="#tempest.util">tempest.util</a></li></ul></div></td><td class="codes">&nbsp;</td></tr><tr><td class="docs"><div class="docs-header"><a class="anchor" href="#tempest.macros" name="tempest.macros"><h1 class="project-name">tempest.macros</h1><a class="toc-link" href="#toc">toc</a></a></div></td><td class="codes" /></tr><tr><td class="docs">
-</td><td class="codes"><pre class="brush: clojure">(ns tempest.macros)</pre></td></tr><tr><td class="docs">
-</td><td class="codes"><pre class="brush: clojure">(defmacro fntime [&amp; body]
+</script><title>tempest-cljs -- Marginalia</title></head><body><table><tr><td class="docs"><div class="header"><h1 class="project-name">tempest-cljs</h1><h2 class="project-version">0.1.1-SNAPSHOT</h2><br /><p>Clone of Tempest vector-graphic arcade game.</p>
+</div><div class="dependencies"><h3>dependencies</h3><table><tr><td class="dep-name">org.clojure/clojure</td><td class="dotted"><hr /></td><td class="dep-version">1.3.0</td></tr><tr><td class="dep-name">noir</td><td class="dotted"><hr /></td><td class="dep-version">1.2.1</td></tr></table></div><div class="dependencies"><h3>dev dependencies</h3><table><tr><td class="dep-name">lein-marginalia</td><td class="dotted"><hr /></td><td class="dep-version">0.7.0-SNAPSHOT</td></tr></table></div></td><td class="codes" style="text-align: center; vertical-align: middle;color: #666;padding-right:20px"><br /><br /><br />(this space intentionally left almost blank)</td></tr><tr><td class="docs"><div class="toc"><a name="toc"><h3>namespaces</h3></a><ul><li><a href="#tempest.macros">tempest.macros</a></li><li><a href="#tempest">tempest</a></li><li><a href="#tempest.core">tempest.core</a></li><li><a href="#tempest.draw">tempest.draw</a></li><li><a href="#tempest.levels">tempest.levels</a></li><li><a href="#tempest.path">tempest.path</a></li><li><a href="#tempest.util">tempest.util</a></li></ul></div></td><td class="codes">&nbsp;</td></tr><tr><td class="docs"><div class="docs-header"><a class="anchor" href="#tempest.macros" name="tempest.macros"><h1 class="project-name">tempest.macros</h1><a class="toc-link" href="#toc">toc</a></a></div></td><td class="codes" /></tr><tr><td class="docs"><p>Macros for Tempest, in separate namespace because of ClojureScript
+   limitation.</p>
+</td><td class="codes"><pre class="brush: clojure">(ns tempest.macros)</pre></td></tr><tr><td class="docs"><p>Log time taken to run given expressions to javascript console.</p>
+</td><td class="codes"><pre class="brush: clojure">(defmacro fntime
+  [&amp; body]
   `(let [starttime# (goog.now)]
      (do
        ~@body
        (.log js/console
-             (str &quot;Fn time: &quot; (pr-str (- (goog.now) starttime#)) &quot; ms&quot;)))))</pre></td></tr><tr><td class="spacer docs">&nbsp;</td><td class="codes" /></tr><tr><td class="docs"><div class="docs-header"><a class="anchor" href="#tempest" name="tempest"><h1 class="project-name">tempest</h1><a class="toc-link" href="#toc">toc</a></a></div></td><td class="codes" /></tr><tr><td class="docs">
+             (str &quot;Fn time: &quot; (pr-str (- (goog.now) starttime#)) &quot; ms&quot;)))))</pre></td></tr><tr><td class="spacer docs">&nbsp;</td><td class="codes" /></tr><tr><td class="docs"><div class="docs-header"><a class="anchor" href="#tempest" name="tempest"><h1 class="project-name">tempest</h1><a class="toc-link" href="#toc">toc</a></a></div></td><td class="codes" /></tr><tr><td class="docs"><p>Publicly exported functions to embed Tempest game in HTML.</p>
 </td><td class="codes"><pre class="brush: clojure">(ns tempest
   (:require [tempest.levels :as levels]
             [tempest.util :as util]
+            [tempest.draw :as draw]
+            [tempest.core :as c]
             [goog.dom :as dom]
             [goog.Timer :as timer]
             [goog.events :as events]
@@ -3047,7 +3051,7 @@ net.brehaut.ClojureTools = (function (SH) {
             [goog.events.KeyHandler :as key-handler]
             [goog.events.KeyCodes :as key-codes]
             [clojure.browser.repl :as repl])
-  (:require-macros [tempest.macros :as macros]))</pre></td></tr><tr><td class="docs"><p>Rough design notes:</p>
+  (:require-macros [tempest.macros :as macros]))</pre></td></tr><tr><td class="docs"><h2>Design notes:</h2>
 
 <ul>
 <li>Nearly everything is defined with polar coordinates (length and angle)</li>
@@ -3065,7 +3069,7 @@ The sign of the stride is direction, with positive strides moving out
 towards the player.</li>
 </ul>
 
-<p>Obscure design oddities:</p>
+<h2>Obscure design oddities:</h2>
 
 <ul>
 <li>draw-path can optionally follow, but not draw, the first line of an
@@ -3079,12 +3083,10 @@ drawn vertex.  An example is the player's ship, whose first vertex
 is it's "rear thruster", but who's origin when drawing must be up
 in the front center of the ship.</li>
 </ul>
-</td><td class="codes"></td></tr><tr><td class="docs">
-</td><td class="codes"><pre class="brush: clojure">(repl/connect &quot;http://localhost:9000/repl&quot;)</pre></td></tr><tr><td class="docs"><p>TODO:</p>
+
+<h2>TODO:</h2>
 
 <ul>
-<li>BUG: there's an extra segment at the top of level 6 with no width</li>
-<li>Bullet updates should check if they hit or passed over an enemy</li>
 <li>Flippers should.. flip.</li>
 <li>Player should be sucked down the level if a flipper touches him</li>
 <li>MOAR ENEMIES</li>
@@ -3106,66 +3108,75 @@ normal to the segment's top line.</li>
 <li>Rate-limit bullets</li>
 <li>Frame timing, and disassociate movement speed from framerate.</li>
 </ul>
-</td><td class="codes"></td></tr><tr><td class="docs"><p>Path that defines player.</p>
-</td><td class="codes"><pre class="brush: clojure">(def player-path
-  [[40 90]
-   [44 196]
-   [27 333]
-   [17 135]
-   [30 11]
-   [30 349]
-   [17 225]
-   [27 27]
-   [44 164]])</pre></td></tr><tr><td class="docs"><p>(def flipper-path
- [[32 16]
-  [16 214]
-  [16 326]
-  [64 164]
-  [16 326]
-  [16 214]
-  [32 16]])</p>
-</td><td class="codes"></td></tr><tr><td class="docs"><p>(def bullet-path
- [[11.3 90]
-  [16 45]
-  [16 135]
-  [16 225]
-  [16 315]
-  ])</p>
-</td><td class="codes"></td></tr><tr><td class="docs"><p>Rounds all numbers in a path (vector of 2-tuples) to nearest integer.</p>
-</td><td class="codes"><pre class="brush: clojure">(defn round-path-math
-  [path]
-  (map (fn [coords]
-         [(js/Math.round (first coords))
-          (js/Math.round (peek coords))])
-       path))</pre></td></tr><tr><td class="docs"><p>Rounds all numbers in a path (vector of 2-tuples) to nearest integer.
-   ONLY WORKS WITH POSITIVE NUMBERS.  Faster than round-path-math.</p>
-</td><td class="codes"><pre class="brush: clojure">(defn round-path-hack
-  [path]
-  (map (fn [[x y]]
-         [(js* &quot;~~&quot; (+ 0.5 x))
-          (js* &quot;~~&quot; (+ 0.5 y))])
-       path))</pre></td></tr><tr><td class="docs"><p>Use round-path-hack for now, since it's theoretically faster</p>
-</td><td class="codes"><pre class="brush: clojure">(def round-path round-path-hack)</pre></td></tr><tr><td class="docs"><p>Returns a path to draw a 'flipper' enemy with given width.</p>
-</td><td class="codes"><pre class="brush: clojure">(defn flipper-path-with-width
-  [width]
-  (let [r (/ width (js/Math.cos (util/deg-to-rad 16)))]
-    [[0 0]
-     [(/ r 2) 16]
-     [(/ r 4) 214]
-     [(/ r 4) 326]
-     [r 164]
-     [(/ r 4) 326]
-     [(/ r 4) 214]
-     [(/ r 2) 16]]))</pre></td></tr><tr><td class="docs"><p>Returns a path to draw a projectile with the given width.</p>
-</td><td class="codes"><pre class="brush: clojure">(defn projectile-path-with-width
-  [width]
-  (let [r (/ width (* 2 (js/Math.cos (util/deg-to-rad 45))))
-        midheight (* r (js/Math.sin (util/deg-to-rad 45)))]
-    [[midheight 270]
-     [r 45]
-     [r 135]
-     [r 225]
-     [r 315]]))</pre></td></tr><tr><td class="docs"><p>Returns a dictionary describing a projectile (bullet) on the given level,
+</td><td class="codes"></td></tr><tr><td class="docs"><p>Begins a game of tempest.  'level' specified as a string representation
+   of an integer.</p>
+</td><td class="codes"><pre class="brush: clojure">(defn ^:export canvasDraw
+  [level]
+  (let [document (dom/getDocument)
+        timer (goog.Timer. 20)
+        level (get levels/*levels* (- (js/parseInt level) 1))
+        canvas (dom/getElement &quot;canv-fg&quot;)
+        context (.getContext canvas &quot;2d&quot;)
+        bgcanvas (dom/getElement &quot;canv-bg&quot;)
+        bgcontext (.getContext bgcanvas &quot;2d&quot;)
+        handler (goog.events.KeyHandler. document)
+        dims {:width (.-width canvas) :height (.-height canvas)}]
+    (.log js/console (str &quot;Animation function: &quot; (pr-str *animMethod*)))
+    (reset! c/*player* (c/build-player level 7))
+    (reset! c/*enemy-list*
+            (list
+             (c/build-enemy level 0 :step 0)
+             (c/build-enemy level 1 :step 0)
+             (c/build-enemy level 1 :step 10)
+             (c/build-enemy level 1 :step 20)
+             (c/build-enemy level 1 :step 30)
+             (c/build-enemy level 1 :step 40)
+             (c/build-enemy level 1 :step 50)
+             (c/build-enemy level 1 :step 60)
+             (c/build-enemy level 1 :step 70)
+             (c/build-enemy level 3 :step 0)
+             (c/build-enemy level 3 :step 10)
+             (c/build-enemy level 3 :step 20)
+             (c/build-enemy level 3 :step 30)
+             (c/build-enemy level 3 :step 40)
+             (c/build-enemy level 3 :step 50)
+             (c/build-enemy level 3 :step 60)
+             (c/build-enemy level 3 :step 70)
+             (c/build-enemy level 7 :step 0)
+             (c/build-enemy level 7 :step 10)
+             (c/build-enemy level 7 :step 20)
+             (c/build-enemy level 7 :step 30)
+             (c/build-enemy level 7 :step 40)
+             (c/build-enemy level 7 :step 50)
+             (c/build-enemy level 8 :step 0)
+             (c/build-enemy level 8 :step 10)
+             (c/build-enemy level 8 :step 20)
+             (c/build-enemy level 8 :step 30)
+             (c/build-enemy level 8 :step 40)
+             (c/build-enemy level 8 :step 50)
+             (c/build-enemy level 8 :step 60)
+             (c/build-enemy level 11 :step 10)))
+    (draw/draw-board bgcontext dims level)
+    (c/*animMethod* #(c/update-game! context dims level))
+    (events/listen handler &quot;key&quot; (fn [e] (c/keypress e)))))</pre></td></tr><tr><td class="spacer docs">&nbsp;</td><td class="codes" /></tr><tr><td class="docs"><div class="docs-header"><a class="anchor" href="#tempest.core" name="tempest.core"><h1 class="project-name">tempest.core</h1><a class="toc-link" href="#toc">toc</a></a></div></td><td class="codes" /></tr><tr><td class="docs"><p>Functions related to the game of tempest, and game state.</p>
+
+<p>   Functions in this module create the game state, and modify it based on
+   player actions or time.  This includes management of entities such as
+   the player's ship, enemies, and projectiles.</p>
+</td><td class="codes"><pre class="brush: clojure">(ns tempest.core
+  (:require [tempest.levels :as levels]
+            [tempest.util :as util]
+            [tempest.draw :as draw]
+            [tempest.path :as path]
+            [goog.dom :as dom]
+            [goog.math :as math]
+            [goog.events :as events]
+            [goog.events.KeyHandler :as key-handler]
+            [goog.events.KeyCodes :as key-codes]
+            [clojure.browser.repl :as repl]))</pre></td></tr><tr><td class="docs">
+</td><td class="codes"><pre class="brush: clojure">(repl/connect &quot;http://localhost:9000/repl&quot;)</pre></td></tr><tr><td class="docs"><p>Boolean flag to mark if the game is paused.</p>
+</td><td class="codes"><pre class="brush: clojure">(def 
+  *paused* (atom false))</pre></td></tr><tr><td class="docs"><p>Returns a dictionary describing a projectile (bullet) on the given level,
    in the given segment, with a given stride (steps per update to move, with
    negative meaning in and positive meaning out), and given step to start on.</p>
 </td><td class="codes"><pre class="brush: clojure">(defn build-projectile
@@ -3174,7 +3185,7 @@ normal to the segment's top line.</li>
    :stride stride
    :segment seg-idx
    :level level
-   :path-fn projectile-path-on-level
+   :path-fn path/projectile-path-on-level
    })</pre></td></tr><tr><td class="docs"><p>Returns a dictionary describing an enemy on the given level and segment,
    and starting on the given step.  Step defaults to 0 (innermost step of
    level) if not specified. TODO: Only makes flippers.</p>
@@ -3183,14 +3194,15 @@ normal to the segment's top line.</li>
   {:step step
    :stride 1
    :segment seg-idx
-   :path-fn flipper-path-on-level
+   :path-fn path/flipper-path-on-level
    :level level
    :hits-remaining 1})</pre></td></tr><tr><td class="docs"><p>Returns a dictionary describing a player on the given level and segment.</p>
 </td><td class="codes"><pre class="brush: clojure">(defn build-player
   [level seg-idx]
   {:segment seg-idx
    :level level
-   :step (:steps level)})</pre></td></tr><tr><td class="docs"><p>Returns the next step position of given entity, taking into account
+   :step (:steps level)
+   :bullet-stride -5})</pre></td></tr><tr><td class="docs"><p>Returns the next step position of given entity, taking into account
    minimum and maximum positions of the level.</p>
 </td><td class="codes"><pre class="brush: clojure">(defn entity-next-step
   [entity]
@@ -3232,261 +3244,7 @@ normal to the segment's top line.</li>
        (if (empty? entity)
          newlist
          (recur (rest oldlist)
-                (cons (update-entity-position! entity) newlist))))) entity-list []))</pre></td></tr><tr><td class="docs"><p>Return a polar coordinate with the first element (radius) scaled using
-   the function scalefn</p>
-</td><td class="codes"><pre class="brush: clojure">(defn scale-polar-coord
-  [scalefn coord]
-  [(scalefn (first coord)) (peek coord)])</pre></td></tr><tr><td class="docs"><p>Add angle to all polar coordinates in path.</p>
-</td><td class="codes"><pre class="brush: clojure">(defn rotate-path
-  [angle path]
-  (map (fn [coords]
-         [(first coords)
-          (mod (+ angle (peek coords)) 360)])
-       path))</pre></td></tr><tr><td class="docs"><p>Multiply all lengths of polar coordinates in path by scale.</p>
-</td><td class="codes"><pre class="brush: clojure">(defn scale-path
-  [scale path]
-  (map (fn [coords]
-         [(* scale (first coords))
-          (peek coords)])
-       path))</pre></td></tr><tr><td class="docs"><p>Add 'length' to radius of polar coordinate.</p>
-</td><td class="codes"><pre class="brush: clojure">(defn polar-extend
-  [length coord]
-  [(+ length (first coord))
-   (peek coord)])</pre></td></tr><tr><td class="docs"><p>Add 'length' to all polar coordinates in path</p>
-</td><td class="codes"><pre class="brush: clojure">(defn path-extend
-  [length path]
-  (map #(polar-extend length %) path))</pre></td></tr><tr><td class="docs"><p>Returns current polar coordinates to the entity.</p>
-</td><td class="codes"><pre class="brush: clojure">(defn polar-entity-coord
-  [entity]
-  (let [steplen (step-length-segment-midpoint (:level entity)
-                                              (:segment entity))
-        offset (* steplen (:step entity))
-        midpoint (segment-midpoint (:level entity) (:segment entity))]
-    (polar-extend offset midpoint)))</pre></td></tr><tr><td class="docs"><p>Returns the angle from origin that the enemy needs to be rotated to
-   appear in the correct orientation at its current spot on the level.
-   In reality, it returns the angle of the line that traverses the segment
-   across the midpoint of the enemy.  TODO: This should be renamed to
-   'entity-angle', it works with anything on the board.</p>
-</td><td class="codes"><pre class="brush: clojure">(defn enemy-angle
-  [enemy]
-  (let [edges (polar-lines-for-segment (:level enemy)
-                                       (:segment enemy)
-                                       false)
-        edge-steps (step-lengths-for-segment-lines (:level enemy)
-                                                   (:segment enemy))
-        offset0 (* (first edge-steps) (:step enemy))
-        offset1 (* (peek edge-steps) (:step enemy))
-        point0 (polar-extend offset0 (first edges))
-        point1 (polar-extend offset1 (peek edges))]
-    (util/rad-to-deg
-     (apply js/Math.atan2
-            (vec (reverse (map - (polar-to-cartesian-coords point0)
-                      (polar-to-cartesian-coords point1))))))))</pre></td></tr><tr><td class="docs"><p>Returns how wide the given enemy should be drawn to span the full width
-   of its current location.  In reality, that means returning the length of
-   the line that spans the level segment, cutting through the enemy's
-   midpoint.  TODO: rename this entity-desired-width.</p>
-</td><td class="codes"><pre class="brush: clojure">(defn enemy-desired-width
-  [enemy]
-  (let [edges (polar-lines-for-segment (:level enemy)
-                                       (:segment enemy)
-                                       false)
-        edge-steps (step-lengths-for-segment-lines (:level enemy)
-                                                   (:segment enemy))
-        offset0 (* (first edge-steps) (:step enemy))
-        offset1 (* (peek edge-steps) (:step enemy))
-        point0 (polar-extend offset0 (first edges))
-        point1 (polar-extend offset1 (peek edges))]
-    (polar-distance point0 point1)))</pre></td></tr><tr><td class="docs"><p>Returns the path of polar coordinates to draw the player correctly at its
-   current location.  It corrects for size and angle.</p>
-</td><td class="codes"><pre class="brush: clojure">(defn player-path-on-level
-  [player]
-  (let [coord (polar-entity-coord player)]
-    (scale-path 0.6 (rotate-path
-     (enemy-angle player)
-     player-path))))</pre></td></tr><tr><td class="docs"><p>Returns the path of polar coordinates to draw a flipper correctly at its
-   current location.  It corrects for size and angle.</p>
-</td><td class="codes"><pre class="brush: clojure">(defn flipper-path-on-level
-  [flipper]
-  (let [coord (polar-entity-coord flipper)]
-    (rotate-path
-     (enemy-angle flipper)
-     (flipper-path-with-width (* 0.8 (enemy-desired-width flipper))))))</pre></td></tr><tr><td class="docs"><p>Returns the path of polar coordinates to draw a projectile correctly at its
-   current location.  It corrects for size and angle.</p>
-</td><td class="codes"><pre class="brush: clojure">(defn projectile-path-on-level
-  [projectile]
-  (let [coord (polar-entity-coord projectile)]
-    (rotate-path
-     (enemy-angle projectile)
-     (projectile-path-with-width (* 0.3 (enemy-desired-width projectile))))))</pre></td></tr><tr><td class="docs"><p>Given two polar coordinates, returns one polar coordinate with the first
-   elements (radii) summed, and the second elements (angles) subtracted.
-   i.e. [r1+r0, th1-th0].  This is used to move point0 to be relative to
-   point1.</p>
-</td><td class="codes"><pre class="brush: clojure">(defn add-sub
-  [point0 point1]
-  [(+ (first point1) (first point0))
-   (- (peek point1) (peek point0))])</pre></td></tr><tr><td class="docs"><p>Return cartesian coordinate 'point' in relation to 'origin'.</p>
-</td><td class="codes"><pre class="brush: clojure">(defn rebase-origin
-  [point origin]
-  (add-sub point origin))</pre></td></tr><tr><td class="docs"><p>Converts a polar coordinate (r,theta) into a cartesian coordinate (x,y)
-   centered on in a rectangle with given width and height.</p>
-</td><td class="codes"><pre class="brush: clojure">(defn polar-to-cartesian-centered
-  [point {width :width height :height}]
-  (rebase-origin (polar-to-cartesian-coords point) [(/ width 2) (/ height 2)]))</pre></td></tr><tr><td class="docs"><p>Draws a 'path', a vector of multiple polar coordinates, on an HTML5 2D
-   drawing canvas.</p>
-
-<p>   context -- The '2D Context' of an HTML5 canvas element
-   origin -- The point (cartesian coordinate) to start drawing from
-   vecs -- Vector of polar coordinates to draw
-   skipfirst? -- Whether the first line described by vecs should be drawn.  If
-      no, the first line can be used to offset the path, in effect changing the
-      'midpoint' of the entity being drawn.  If yes, the 'midpoint' of the
-      object is the first vertex from which the first line is drawn.</p>
-</td><td class="codes"><pre class="brush: clojure">(defn draw-path
-  [context origin vecs skipfirst?]
-  (do
-    (.moveTo context (first origin) (peek origin))    
-    ((fn [origin vecs skip?]
-       (if (empty? vecs)
-         nil
-         (let [line (first vecs)
-               point (rebase-origin (polar-to-cartesian-coords line) origin)]
-           (if-not skip?
-             (.lineTo context (first point) (peek point))
-             (.moveTo context (first point) (peek point)))
-           (recur point (next vecs) false))))
-     origin vecs skipfirst?)
-    (.stroke context)))</pre></td></tr><tr><td class="docs"><p>Converts polar coordinates to cartesian coordinates.  If optional length-fn
-   is specified, it is applied to the radius first.</p>
-</td><td class="codes"><pre class="brush: clojure">(defn polar-to-cartesian-coords
-  ([[r angle]] [(math/angleDx angle r) (math/angleDy angle r)])
-  ([[r angle] length-fn]
-     (let [newr (length-fn r)]
-       [(math/angleDx angle newr) (math/angleDy angle newr)])))</pre></td></tr><tr><td class="docs"><p>Returns distance between to points specified by polar coordinates.</p>
-</td><td class="codes"><pre class="brush: clojure">(defn polar-distance
-  [[r0 theta0] [r1 theta1]]
-  (js/Math.sqrt
-   (+
-    (js/Math.pow r0 2)
-    (js/Math.pow r1 2)
-    (* -2 r0 r1 (js/Math.cos (util/deg-to-rad (- theta1 theta0)))))))</pre></td></tr><tr><td class="docs"><p>Returns the radius to the midpoint of a line drawn between two polar
-   coordinates.</p>
-</td><td class="codes"><pre class="brush: clojure">(defn polar-midpoint-r
-  [[r0 theta0] [r1 theta1]]
-  (js/Math.round
-   (/
-    (js/Math.sqrt 
-     (+
-      (js/Math.pow r0 2)
-      (js/Math.pow r1 2)
-      (* 2 r0 r1 (js/Math.cos (util/deg-to-rad (- theta1 theta0))))))
-    2)))</pre></td></tr><tr><td class="docs"><p>Returns the angle to the midpoint of a line drawn between two polar
-   coordinates.</p>
-</td><td class="codes"><pre class="brush: clojure">(defn polar-midpoint-theta
-  [[r0 theta0] [r1 theta1]]
-  (js/Math.round
-   (mod
-    (+ (util/rad-to-deg
-        (js/Math.atan2
-         (+
-          (* r0 (js/Math.sin (util/deg-to-rad theta0)))
-          (* r1 (js/Math.sin (util/deg-to-rad theta1))))
-         (+
-          (* r0 (js/Math.cos (util/deg-to-rad theta0)))
-          (* r1 (js/Math.cos (util/deg-to-rad theta1))))))
-       360) 360)))</pre></td></tr><tr><td class="docs"><p>Returns polar coordinate representing the midpoint between the two
-   points specified.  This can be used to draw a line down the middle
-   of a level segment -- the line that entities should follow.</p>
-</td><td class="codes"><pre class="brush: clojure">(defn polar-midpoint
-  [point0 point1]
-  [(polar-midpoint-r point0 point1)
-   (polar-midpoint-theta point0 point1)])</pre></td></tr><tr><td class="docs"><p>Given a level and a segment index, returns the midpoint of the segment.
-   scaled? determines whether it gives you the inner (false) or outer (true)
-   point.</p>
-</td><td class="codes"><pre class="brush: clojure">(defn segment-midpoint
-  [level seg-idx scaled?]
-  (apply polar-midpoint
-         (polar-lines-for-segment level seg-idx scaled?)))</pre></td></tr><tr><td class="docs"><p>Returns vector [line0 line1], where lineN is a polar coordinate describing
-   the line from origin (canvas midpoint) that would draw the edges of a level
-   segment.</p>
-
-<p>   'scaled?' sets whether you want the unscaled, inner point, or the
-   outer point scaled with the level's scale function.</p>
-
-<p>   To actually draw a level's line, you would move to the unscaled point
-   without drawing, and then draw to the scaled point.</p>
-</td><td class="codes"><pre class="brush: clojure">(defn polar-lines-for-segment
-  [level seg-idx scaled?]
-  (let [[seg0 seg1] (get (:segments level) seg-idx)
-        line0 (get (:lines level) seg0)
-        line1 (get (:lines level) seg1)]
-    (if (true? scaled?)
-      [(scale-polar-coord (:length-fn level) line0)
-       (scale-polar-coord (:length-fn level) line1)]
-      [line0 line1])))</pre></td></tr><tr><td class="docs"><p>Returns vector [[x0 y0] [x1 y1] [x2 y2] [x3 y3]] describing segment's
-   rectangle in cartesian coordinates.</p>
-</td><td class="codes"><pre class="brush: clojure">(defn rectangle-for-segment
-  [level seg-idx]
-  (let [[seg0 seg1] (get (:segments level) seg-idx)
-        line0 (get (:lines level) seg0)
-        line1 (get (:lines level) seg1)]
-    [(polar-to-cartesian-coords line0)
-     (polar-to-cartesian-coords line0 (:length-fn level))
-     (polar-to-cartesian-coords line1 (:length-fn level))
-     (polar-to-cartesian-coords line1)]))</pre></td></tr><tr><td class="docs"><p>Center a cartesian coordinate centered around (0,0) to be centered around
-   the middle of a rectangle with the given width and height.  It inverts y,
-   assuming that the input y is 'up', and in the output y is 'down', as is
-   the case with an HTML5 canvas.</p>
-</td><td class="codes"><pre class="brush: clojure">(defn point-to-canvas-coords
-  [{width :width height :height} p]
-  (let [xmid (/ width 2)
-        ymid (/ height 2)]
-    [(+ (first p) xmid) (- ymid (peek p))]))</pre></td></tr><tr><td class="docs"><p>Given a rectangle (vector of 4 cartesian coordinates) centered around (0,0),
-   this function shifts them to be centered around the center of an HTML5
-   canvas with the :width and :height set in dims.</p>
-</td><td class="codes"><pre class="brush: clojure">(defn rectangle-to-canvas-coords
-  [dims rect]
-  (map #(point-to-canvas-coords dims %) rect))</pre></td></tr><tr><td class="docs"><p>Draws a rectangle (4 cartesian coordinates in a vector) on the 2D context
-   of an HTML5 canvas.</p>
-</td><td class="codes"><pre class="brush: clojure">(defn draw-rectangle
-  [context [p0 &amp; points]]
-  (.moveTo context (first p0) (peek p0))
-  (doseq [p points]
-    (.lineTo context (first p) (peek p)))
-  (.lineTo context (first p0) (peek p0))
-  (.stroke context))</pre></td></tr><tr><td class="docs"><p>Finds the 'step length' of a line through the middle of a level's segment.
-   This is how many pixels an entity should move per update to travel one
-   step.</p>
-</td><td class="codes"><pre class="brush: clojure">(defn step-length-segment-midpoint
-  [level seg-idx]
-  (/
-   (-
-    (first (segment-midpoint level seg-idx true))
-    (first (segment-midpoint level seg-idx false)))
-   (:steps level)))</pre></td></tr><tr><td class="docs"><p>Finds the 'step length' of a line along the edge of a level's segment.</p>
-</td><td class="codes"><pre class="brush: clojure">(defn step-length-segment-edge
-  [level line]
-  (/
-   (-
-    ((:length-fn level) (first line))
-    (first line))
-   (:steps level)))</pre></td></tr><tr><td class="docs"><p>Finds the 'step length' of an arbitrary line on the given level.</p>
-</td><td class="codes"><pre class="brush: clojure">(defn step-length-line
-  [level point0 point1]
-  (js/Math.abs
-   (/
-    (-
-     (first point0)
-     (first point1))
-    (:steps level))))</pre></td></tr><tr><td class="docs"><p>Returns a vector [len0 len1] with the 'step length' for the two edge
-   lines that mark the boundaries of the given segment.</p>
-</td><td class="codes"><pre class="brush: clojure">(defn step-lengths-for-segment-lines
-  [level seg-idx]
-  (let [coords (concat (polar-lines-for-segment level seg-idx false)
-                       (polar-lines-for-segment level seg-idx true))
-        line0 (take-nth 2 coords)
-        line1 (take-nth 2 (rest coords))]
-    [(apply #(step-length-line level %1 %2) line0)
-     (apply #(step-length-line level %1 %2) line1)]))</pre></td></tr><tr><td class="docs"><p>Returns true of entity is on seg-idx, and between steps step0 and step1,
+                (cons (update-entity-position! entity) newlist))))) entity-list []))</pre></td></tr><tr><td class="docs"><p>Returns true of entity is on seg-idx, and between steps step0 and step1,
    inclusive.</p>
 </td><td class="codes"><pre class="brush: clojure">(defn entity-between-steps
   [seg-idx step0 step1 entity]
@@ -3609,13 +3367,167 @@ normal to the segment's top line.</li>
     (atom (get (collisions-with-projectile @*enemy-list* bullet) false))))
 (defn collisions-with-projectile-list
   [enemy-list bullet-list]
-  (doall (map remove-collided-enemies! bullet-list)))</pre></td></tr><tr><td class="docs"><p>Draws a line on the given 2D context of an HTML5 canves element, between
+  (doall (map remove-collided-enemies! bullet-list)))</pre></td></tr><tr><td class="docs"><p>Returns true if a projectile has reached either boundary of the level.</p>
+</td><td class="codes"><pre class="brush: clojure">(defn projectile-off-level?
+  [projectile]
+  (cond
+   (zero? (:step projectile)) true
+   (&gt;= (:step projectile) (:steps (:level projectile))) true
+   :else false))</pre></td></tr><tr><td class="docs"><p>Add a new projectile to the global list of live projectiles, originating
+   from the given player, on the segment he is currently on.</p>
+</td><td class="codes"><pre class="brush: clojure">(defn add-player-projectile!
+  [player]
+  (let [level (:level player)
+        seg-idx (:segment player)
+        stride (:bullet-stride player)
+        step (:steps level)]
+    (reset! *projectile-list*
+            (conj @*projectile-list*
+                  (build-projectile level seg-idx stride :step step)))))</pre></td></tr><tr><td class="docs"><p>Returns the segment to the left of the player.  Loops around the level
+   on connected levels, and stops at 0 on unconnected levels.</p>
+</td><td class="codes"><pre class="brush: clojure">(defn segment-player-left
+  [player]
+  (let [level (:level player)
+        seg-max (dec (count (:segments level)))
+        cur-seg (:segment player)
+        loops? (:loops? level)
+        new-seg (dec cur-seg)]
+    (if (&lt; new-seg 0)
+      (if loops? seg-max 0)
+      new-seg)))</pre></td></tr><tr><td class="docs"><p>Returns the segment to the right of the player.  Loops around the level
+   on connected levels, and stops at max on unconnected levels.</p>
+</td><td class="codes"><pre class="brush: clojure">(defn segment-player-right
+  [player]
+  (let [level (:level player)
+        seg-max (dec (count (:segments level)))
+        cur-seg (:segment player)
+        loops? (:loops? level)
+        new-seg (inc cur-seg)]
+    (if (&gt; new-seg seg-max)
+      (if loops? 0 seg-max)
+      new-seg)))</pre></td></tr><tr><td class="docs"><p>Sets global <em>player</em>'s segment key to a new value.</p>
+</td><td class="codes"><pre class="brush: clojure">(defn set-global-player-segment!
+  [seg-idx]
+  (reset! *player* (assoc @*player* :segment seg-idx)))</pre></td></tr><tr><td class="docs"><p>Respond to keyboard key presses.</p>
+</td><td class="codes"><pre class="brush: clojure">(defn keypress
+  [event]
+  (let [player @*player*
+        key (.-keyCode event)]
+    (condp = key
+      key-codes/RIGHT (set-global-player-segment!
+                       (segment-player-right player))
+      key-codes/LEFT (set-global-player-segment!
+                      (segment-player-left player))
+      key-codes/SPACE (add-player-projectile! player)
+      key-codes/ESC (def *paused* (atom (not @*paused*)))
+      nil)))</pre></td></tr><tr><td class="docs">
+</td><td class="codes"><pre class="brush: clojure">(defn animationFrameMethod []
+  &quot;Returns a callable javascript function to schedule a frame to be drawn.
+   Tries to use requestAnimationFrame, or the browser-specific version of
+   it that is available.  Falls back on setTimeout if requestAnimationFrame
+   is not available on player's browser.
+   requestAnimationFrame tries to figure out a consistent framerate based
+   on how long frame takes to render.
+   The setTimeout fail-over is hard-coded to attempt 30fps.
+   &quot;
+  (let [window (dom/getWindow)
+        names [&quot;requestAnimationFrame&quot;
+               &quot;webkitRequestAnimationFrame&quot;
+               &quot;mozRequestAnimationFrame&quot;
+               &quot;oRequestAnimationFrame&quot;
+               &quot;msRequestAnimationFrame&quot;]
+        options (map (fn [name] #(aget window name)) names)]
+    ((fn [[current &amp; remaining]]
+       (cond
+        (nil? current) #((.-setTimeout window) % (/ 1000 30))
+        (fn? (current)) (current)
+        :else (recur remaining)))
+     options)))</pre></td></tr><tr><td class="docs"><p>Stores the frame-scheduling function for the current browser.
+        This function should be called at the end of each frame to
+        schedule the next frame to be drawn at the appropriate time.</p>
+</td><td class="codes"><pre class="brush: clojure">(def 
+  *animMethod* (animationFrameMethod))</pre></td></tr><tr><td class="docs">
+</td><td class="codes"><pre class="brush: clojure">(def *frame-count* (atom 0))
+(def *frame-time* (atom (goog.now)))
+(def *enemy-list* (atom (list)))
+(def *player* (atom (list)))
+(def *projectile-list* (atom (list)))</pre></td></tr><tr><td class="docs"><p>Call all of the drawing functions to redraw the scene, and update all
+   of the entities on the level.</p>
+</td><td class="codes"><pre class="brush: clojure">(defn update-game!
+  [context dims level]
+  (doseq []
+    (.clearRect context 0 0 (:width dims) (:height dims))
+    (draw/draw-player context dims level (deref *player*))
+    (draw/draw-entities context dims level @*enemy-list*)
+    (draw/draw-entities context dims level @*projectile-list*)
+    (when (not @*paused*)
+      (let [new-entities (entities-after-collisions @*enemy-list*
+                                                      @*projectile-list*)]
+        (def *projectile-list* (atom (:projectiles new-entities)))
+        (def *enemy-list* (atom (:entities new-entities))))
+      (def *projectile-list* (atom (update-entity-list @*projectile-list*)))
+      (def *projectile-list* (atom (remove projectile-off-level?
+                                           @*projectile-list*)))
+      (def *enemy-list* (atom (update-entity-list @*enemy-list*)))
+      (*animMethod* #(update-game! context dims level)))
+    (def *frame-count* (atom (inc @*frame-count*)))
+    (when (= 20 @*frame-count*)
+      (let [fps (/ (* 1000 @*frame-count*)
+                   (- (goog.now) @*frame-time*))]
+        (dom/setTextContent (dom/getElement &quot;fps&quot;)
+                            (str &quot;FPS: &quot; (pr-str (js/Math.round fps)))))
+      (def *frame-count* (atom 0))
+      (def *frame-time* (atom (goog.now))))))</pre></td></tr><tr><td class="spacer docs">&nbsp;</td><td class="codes" /></tr><tr><td class="docs"><div class="docs-header"><a class="anchor" href="#tempest.draw" name="tempest.draw"><h1 class="project-name">tempest.draw</h1><a class="toc-link" href="#toc">toc</a></a></div></td><td class="codes" /></tr><tr><td class="docs"><p>Functions related to drawing on an HTML5 canvas.</p>
+
+<p>   The functions in this module are responsible for drawing paths on an
+   HTML5 canvas.  This includes both primitive draw functions, and higher
+   level functions to draw complete game entities using the primitives.</p>
+</td><td class="codes"><pre class="brush: clojure">(ns tempest.draw
+  (:require [tempest.levels :as levels]
+            [tempest.util :as util]
+            [tempest.path :as path]
+            [goog.dom :as dom]
+            [goog.math :as math]
+            [clojure.browser.repl :as repl]))</pre></td></tr><tr><td class="docs"><p>Draws a rectangle (4 cartesian coordinates in a vector) on the 2D context
+   of an HTML5 canvas.</p>
+</td><td class="codes"><pre class="brush: clojure">(defn draw-rectangle
+  [context [p0 &amp; points]]
+  (.moveTo context (first p0) (peek p0))
+  (doseq [p points]
+    (.lineTo context (first p) (peek p)))
+  (.lineTo context (first p0) (peek p0))
+  (.stroke context))</pre></td></tr><tr><td class="docs"><p>Draws a line on the given 2D context of an HTML5 canves element, between
    the two given cartesian coordinates.</p>
 </td><td class="codes"><pre class="brush: clojure">(defn draw-line
   [context point0 point1]
   (.moveTo context (first point0) (peek point0))
   (.lineTo context (first point1) (peek point1))
-  (.stroke context))</pre></td></tr><tr><td class="docs"><p>Draws a player, defined by the given path 'player', on the 2D context of
+  (.stroke context))</pre></td></tr><tr><td class="docs"><p>Draws a 'path', a vector of multiple polar coordinates, on an HTML5 2D
+   drawing canvas.</p>
+
+<p>   context -- The '2D Context' of an HTML5 canvas element
+   origin -- The point (cartesian coordinate) to start drawing from
+   vecs -- Vector of polar coordinates to draw
+   skipfirst? -- Whether the first line described by vecs should be drawn.  If
+      no, the first line can be used to offset the path, in effect changing the
+      'midpoint' of the entity being drawn.  If yes, the 'midpoint' of the
+      object is the first vertex from which the first line is drawn.</p>
+</td><td class="codes"><pre class="brush: clojure">(defn draw-path
+  [context origin vecs skipfirst?]
+  (do
+    (.moveTo context (first origin) (peek origin))    
+    ((fn [origin vecs skip?]
+       (if (empty? vecs)
+         nil
+         (let [line (first vecs)
+               point (path/rebase-origin (path/polar-to-cartesian-coords line)
+                                         origin)]
+           (if-not skip?
+             (.lineTo context (first point) (peek point))
+             (.moveTo context (first point) (peek point)))
+           (recur point (next vecs) false))))
+     origin vecs skipfirst?)
+    (.stroke context)))</pre></td></tr><tr><td class="docs"><p>Draws a player, defined by the given path 'player', on the 2D context of
    an HTML5 canvas, with :height and :width specified in dims, and on the
    given level.</p>
 </td><td class="codes"><pre class="brush: clojure">(defn draw-player
@@ -3624,10 +3536,10 @@ normal to the segment's top line.</li>
     (.beginPath context)
     (draw-path context
                (vec (map js/Math.round
-                         (polar-to-cartesian-centered
-                          (polar-entity-coord player)
+                         (path/polar-to-cartesian-centered
+                          (path/polar-entity-coord player)
                           dims)))
-               (round-path (player-path-on-level player))
+               (path/round-path (path/player-path-on-level player))
                true)
     (.closePath context)))</pre></td></tr><tr><td class="docs"><p>Draws all the entities, defined by paths in 'entity-list', on the 2D context
    of an HTML5 canvas, with :height and :width specified in dims, and on the
@@ -3637,19 +3549,10 @@ normal to the segment's top line.</li>
   (doseq [entity entity-list]
     (.beginPath context)
     (draw-path context
-               (polar-to-cartesian-centered (polar-entity-coord entity) dims)
-               (round-path ((:path-fn entity) entity))
-               true)
-    (.closePath context)))</pre></td></tr><tr><td class="docs"><p>Draws all the enemies, defined by paths in 'enemy-list', on the 2D context
-   of an HTML5 canvas, with :height and :width specified in dims, and on the
-   given level. TODO: This only draws flippers.</p>
-</td><td class="codes"><pre class="brush: clojure">(defn draw-enemies
-  [context dims level]
-  (doseq [enemy @*enemy-list*]
-    (.beginPath context)                           
-    (draw-path context
-               (polar-to-cartesian-centered (polar-entity-coord enemy) dims)
-               (flipper-path-on-level enemy)
+               (path/polar-to-cartesian-centered
+                (path/polar-entity-coord entity)
+                dims)
+               (path/round-path ((:path-fn entity) entity))
                true)
     (.closePath context)))</pre></td></tr><tr><td class="docs"><p>Draws a level on a 2D context of an HTML5 canvas with :height and :width
    specified in dims.</p>
@@ -3660,144 +3563,24 @@ normal to the segment's top line.</li>
    (doseq [idx (range (count (:segments level)))]
       (draw-rectangle
        context
-       (round-path (rectangle-to-canvas-coords
-        dims (rectangle-for-segment level idx)))))
-    (.closePath context)))</pre></td></tr><tr><td class="docs"><p>Returns true if a projectile has reached either boundary of the level.</p>
-</td><td class="codes"><pre class="brush: clojure">(defn projectile-off-level?
-  [projectile]
-  (cond
-   (zero? (:step projectile)) true
-   (&gt;= (:step projectile) (:steps (:level projectile))) true
-   :else false))</pre></td></tr><tr><td class="docs"><p>Call all of the drawing functions to redraw the scene, and update all
-   of the entities on the level.</p>
-</td><td class="codes"><pre class="brush: clojure">(defn draw-world
-  [context dims level]
-  (doseq []
-    (.clearRect context 0 0 (:width dims) (:height dims))
-    (comment (.clearRect context
-                (/ (:width dims) 4) (/ (:height dims) 4)
-                (/ (:width dims) 2) (/ (:height dims) 2)))
-    ;;(draw-board context dims level)
-    (draw-player context dims level (deref *player*))
-    (draw-entities context dims level @*enemy-list*)
-    (draw-entities context dims level @*projectile-list*)
-    (when (not @*paused*)
-      (let [new-entities (entities-after-collisions @*enemy-list*
-                                                    @*projectile-list*)]
-        (def *projectile-list* (atom (:projectiles new-entities)))
-        (def *enemy-list* (atom (:entities new-entities))))
-      (def *projectile-list* (atom (update-entity-list @*projectile-list*)))
-      (def *projectile-list* (atom (remove projectile-off-level?
-                                           @*projectile-list*)))
-      (def *enemy-list* (atom (update-entity-list @*enemy-list*)))
-      (*animMethod* #(draw-world context dims level)))
-    (def *frame-count* (atom (inc @*frame-count*)))
-    (when (= 20 @*frame-count*)
-      (let [fps (/ (* 1000 @*frame-count*)
-                   (- (goog.now) @*frame-time*))]
-        (dom/setTextContent (dom/getElement &quot;fps&quot;)
-                            (str &quot;FPS: &quot; (pr-str (js/Math.round fps)))))
-      (def *frame-count* (atom 0))
-      (def *frame-time* (atom (goog.now))))))</pre></td></tr><tr><td class="docs"><p>Add a new projectile to the global list of live projectiles.</p>
-</td><td class="codes"><pre class="brush: clojure">(defn add-projectile
-  [level seg-idx stride step]
-  (def *projectile-list*
-    (atom
-     (conj @*projectile-list*
-           (build-projectile level seg-idx stride :step step)))))</pre></td></tr><tr><td class="docs"><p>Respond to keyboard key presses.</p>
-</td><td class="codes"><pre class="brush: clojure">(defn keypress
-  [event]
-  (let [player @*player*
-        level (:level player)
-        seg-count (count (:segments level))
-        segment (:segment player)
-        key (.-keyCode event)]
-    (condp = key
-          key-codes/RIGHT (def *player*
-                           (atom
-                            (assoc @*player* :segment
-                                   (mod (+ segment 1) seg-count))))
-          key-codes/LEFT (def *player*
-                           (atom
-                            (assoc @*player* :segment
-                                   (mod (+ (- segment 1) seg-count)
-                                        seg-count))))
-          key-codes/SPACE (add-projectile level segment -5 (:steps level))
-          key-codes/ESC (def *paused* (atom (not @*paused*)))
-          nil)))</pre></td></tr><tr><td class="docs">
-</td><td class="codes"><pre class="brush: clojure">(defn animationFrameMethod []
-  (let [window (dom/getWindow)
-        options (list #(.-requestAnimationFrame window)
-                      #(.-webkitRequestAnimationFrame window)
-                      #(.-mozRequestAnimationFrame window)
-                      #(.-oRequestAnimationFrame window)
-                      #(.-msRequestAnimationFrame window))]
-    ((fn [[current &amp; remaining]]
-       (cond
-        (nil? current) #((.-setTimeout window) % (/ 1000 30))
-        (fn? (current)) (current)
-        :else (recur remaining)))
-     options)))</pre></td></tr><tr><td class="docs">
-</td><td class="codes"><pre class="brush: clojure">(def *paused* (atom false))</pre></td></tr><tr><td class="docs">
-</td><td class="codes"><pre class="brush: clojure">(def *animMethod* (animationFrameMethod))</pre></td></tr><tr><td class="docs"><p>Begins a camge of tempest.  'level' specified as a string representation
-   of an integer.</p>
-</td><td class="codes"><pre class="brush: clojure">(defn ^:export canvasDraw
-  [level]
-  (let [document (dom/getDocument)
-        timer (goog.Timer. 20)
-        level (get levels/*levels* (- (js/parseInt level) 1))
-        canvas (dom/getElement &quot;canv-fg&quot;)
-        context (.getContext canvas &quot;2d&quot;)
-        bgcanvas (dom/getElement &quot;canv-bg&quot;)
-        bgcontext (.getContext bgcanvas &quot;2d&quot;)
-        handler (goog.events.KeyHandler. document)
-        dims {:width (.-width canvas) :height (.-height canvas)}]
-    (.log js/console (str &quot;Animation function: &quot; (pr-str *animMethod*)))
-    (draw-board bgcontext dims level)
-    (def *frame-count* (atom 0))
-    (def *frame-time* (atom (goog.now)))
-    (def *enemy-list*
-      (atom
-       (list
-        (build-enemy level 0 :step 0)
-        (build-enemy level 1 :step 0)
-        (build-enemy level 1 :step 10)
-        (build-enemy level 1 :step 20)
-        (build-enemy level 1 :step 30)
-        (build-enemy level 1 :step 40)
-        (build-enemy level 1 :step 50)
-        (build-enemy level 1 :step 60)
-        (build-enemy level 1 :step 70)
-        (build-enemy level 3 :step 0)
-        (build-enemy level 3 :step 10)
-        (build-enemy level 3 :step 20)
-        (build-enemy level 3 :step 30)
-        (build-enemy level 3 :step 40)
-        (build-enemy level 3 :step 50)
-        (build-enemy level 3 :step 60)
-        (build-enemy level 3 :step 70)
-        (build-enemy level 7 :step 0)
-        (build-enemy level 7 :step 10)
-        (build-enemy level 7 :step 20)
-        (build-enemy level 7 :step 30)
-        (build-enemy level 7 :step 40)
-        (build-enemy level 7 :step 50)
-        (build-enemy level 8 :step 0)
-        (build-enemy level 8 :step 10)
-        (build-enemy level 8 :step 20)
-        (build-enemy level 8 :step 30)
-        (build-enemy level 8 :step 40)
-        (build-enemy level 8 :step 50)
-        (build-enemy level 8 :step 60)
-        (build-enemy level 11 :step 10))))
-    (def *player*
-      (atom (doall (build-player level 7))))
-    (def *projectile-list*
-      (atom (list)))
-    (*animMethod* #(draw-world context dims level))
-    (events/listen handler &quot;key&quot; (fn [e] (keypress e)))))</pre></td></tr><tr><td class="spacer docs">&nbsp;</td><td class="codes" /></tr><tr><td class="docs"><div class="docs-header"><a class="anchor" href="#tempest.levels" name="tempest.levels"><h1 class="project-name">tempest.levels</h1><a class="toc-link" href="#toc">toc</a></a></div></td><td class="codes" /></tr><tr><td class="docs">
+       (path/round-path (path/rectangle-to-canvas-coords
+        dims (path/rectangle-for-segment level idx)))))
+    (.closePath context)))</pre></td></tr><tr><td class="spacer docs">&nbsp;</td><td class="codes" /></tr><tr><td class="docs"><div class="docs-header"><a class="anchor" href="#tempest.levels" name="tempest.levels"><h1 class="project-name">tempest.levels</h1><a class="toc-link" href="#toc">toc</a></a></div></td><td class="codes" /></tr><tr><td class="docs"><p>Functions related to generating paths representing levels.</p>
 </td><td class="codes"><pre class="brush: clojure">(ns tempest.levels
-  (:require [tempest.util :as util]))</pre></td></tr><tr><td class="docs"><p>Levels are defined by a vector of polar coordinates [r theta],
+  (:require [tempest.util :as util]))</pre></td></tr><tr><td class="docs"><h2>Level Terminology:</h2>
+
+<p><em>length</em> and <em>depth</em> both refer to how far from origin the inner
+line is drawn, in pixels.</p>
+
+<p><em>length-fn</em> is a function to determine how long between inner and
+outer line.  Takes one argument 'r' to the inner line.  Returns
+'r' to the outer line.  Default is 'inner r' multiplied by 4.</p>
+
+<p><em>width</em> is how wide, in pixels, the outer line segment is.</p>
+
+<h2>Level design</h2>
+
+<p>Levels are defined by a vector of polar coordinates [r theta],
 which are used to build a vector of 'segments' that form a level.</p>
 
 <p>Levels can be manually specified by building a vector of lines
@@ -3808,18 +3591,7 @@ functions in this module with various parameters.</p>
 
 <p>Levels are drawn radially, from the center point of the canvas.</p>
 
-<p>Levels are stored in the <em>levels</em> vector as a list of maps.</p>
-
-<p>Terminology in this module:</p>
-
-<p>"length" and "depth" both refer to how far from origin the inner
-line is drawn, in pixels.</p>
-
-<p>"length-fn" is a function to determine how long between inner and
-outer line.  Takes one argument 'r' to the inner line.  Returns
-'r' to the outer line.  Default is 'inner r' multiplied by 4.</p>
-
-<p>"width" is how wide, in pixels, the outer line segment is.</p>
+<p>Levels are stored in the *levels* vector as a list of maps.</p>
 
 <p>Enemies travel up segments in steps.  A level has the same number
 of steps per segment, but the size of the steps can vary depending
@@ -3841,20 +3613,19 @@ how many steps up the segment.</p>
   (let [segments (build-unlinked-segment-list max-x)]
     (if (true? linked?)
       (conj segments [(last (last segments)) (first (first segments))])
-      segments)))</pre></td></tr><tr><td class="docs"><p>"Flat" level functions follow:</p>
+      segments)))</pre></td></tr><tr><td class="docs"><h2>"Flat" level functions</h2>
 
 <p>Functions for generating "flat" levels: levels where the edge appears as
 a straight line.  Something like this garbage:</p>
 
-<pre><code>  ___________________________
- /  /  / |  |  |  |  |   \   \
-/  |  |  |  |  |  |   |   \   \
+<pre><code>      ___________________________
+     /  /  / |  |  |  |  |   \   \
+    /  |  |  |  |  |  |   |   \   \
+   /  /  |  |   |  |   |   |   |   \
+  /  /  /   |  |   |   |   |    |   \
+ /  /  /   |   |   |   |    |    |   \
+----------------------------------------
 </code></pre>
-
-<p>   /  /  |  |   |  |   |   |   |   \
-  /  /  /   |  |   |   |   |    |   \</p>
-
-<h2> /  /  /   |   |   |   |    |    |   \</h2>
 
 <p>Flat levels always start with a line dropped straight down, and build
 out symmetrically from there.  The width of segments at the "outer" edge
@@ -3881,21 +3652,23 @@ out symmetrically from there.  The width of segments at the "outer" edge
   [segment-count segment-width segment-depth]
   (concat (reverse (map #(r-theta-pair-flat % segment-width segment-depth 270 -1) (range segment-count)))
           [[80 270]]
-          (map #(r-theta-pair-flat % segment-width segment-depth 270 1) (range segment-count))))</pre></td></tr><tr><td class="docs"><p>"Oblong" level functions follow:</p>
+          (map #(r-theta-pair-flat % segment-width segment-depth 270 1) (range segment-count))))</pre></td></tr><tr><td class="docs"><h2>"Oblong" level functions</h2>
 
 <p>Functions for generating oblong triangles using Law of Cosines.
 Use to generate arbitrary levels from a list of angles, gamma(0)..gamma(N),
-where gamma is the angle between the previous line segment 'towards the player'
-and the line segment that makes the 'width' of the segment.
-            <em>_</em>_
-           /    / \
-          /    /   \ 
-         /    /     /
-        /    /     /
-gamma1-/->  /     /
-      /<em>_</em>_/     /
-            \  </--- gamma0
-             \ /</p>
+where gamma is the angle between the previous line segment 'towards the
+player' and the line segment that makes the 'width' of the segment.</p>
+
+<pre><code>              ____
+             /    / \
+            /    /   \ 
+           /    /     /
+          /    /     /
+  gamma1-/-&gt;  /     /
+        /____/     /
+              \  &lt;/--- gamma0
+               \ /
+</code></pre>
 
 <p>Named 'oblong' after the triangles formed when the lines are extended to origin.
 As opposed to the flat-levels, which are constructed of right triangles.</p>
@@ -3944,7 +3717,7 @@ a list of angles.</p>
   (concat
    (oblong-half-level gammas width height -)
    [[height 270]]
-   (reverse (oblong-half-level gammas width height +))))</pre></td></tr><tr><td class="docs"><p>BELOW HERE ARE LEVELS</p>
+   (reverse (oblong-half-level gammas width height +))))</pre></td></tr><tr><td class="docs"><h2>BELOW HERE ARE LEVEL DEFINITIONS</h2>
 </td><td class="codes"></td></tr><tr><td class="docs"><p>Flat level with 8 segments</p>
 </td><td class="codes"><pre class="brush: clojure">(def *level1_lines* (vec (flat-level 4 15 80)))</pre></td></tr><tr><td class="docs"><p>Custom level, a circle</p>
 </td><td class="codes"><pre class="brush: clojure">(def *level2_lines*
@@ -3980,6 +3753,7 @@ a list of angles.</p>
 </td><td class="codes"><pre class="brush: clojure">(defn make-level-entry 
   [lines loops?]
   {:lines lines
+   :loops? loops?
    :segments (build-segment-list (- (count lines) 1) loops?)
    :length-fn *default-length-fn*
    :steps *default-steps-per-segment*})</pre></td></tr><tr><td class="docs">
@@ -3989,10 +3763,296 @@ a list of angles.</p>
     (make-level-entry *level3_lines* false)
     (make-level-entry *level4_lines* false)
     (make-level-entry *level5_lines* false)
-    (make-level-entry *level6_lines* true)])</pre></td></tr><tr><td class="spacer docs">&nbsp;</td><td class="codes" /></tr><tr><td class="docs"><div class="docs-header"><a class="anchor" href="#tempest.util" name="tempest.util"><h1 class="project-name">tempest.util</h1><a class="toc-link" href="#toc">toc</a></a></div></td><td class="codes" /></tr><tr><td class="docs">
-</td><td class="codes"><pre class="brush: clojure">(ns tempest.util)</pre></td></tr><tr><td class="docs">
-</td><td class="codes"><pre class="brush: clojure">(defn rad-to-deg [rad]
-  (/ (* rad 180) 3.14159265358979))</pre></td></tr><tr><td class="docs">
-</td><td class="codes"><pre class="brush: clojure">(defn deg-to-rad [deg]
-  (/ (* deg 3.14159265358979) 180))</pre></td></tr><tr><td class="spacer docs">&nbsp;</td><td class="codes" /></tr></table><div class="footer">Generated by <a href="https://github.com/fogus/marginalia">Marginalia</a>.&nbsp;&nbsp;Syntax highlighting provided by Alex Gorbatchev's <a href="http://alexgorbatchev.com/SyntaxHighlighter/">SyntaxHighlighter</a></div><script type="text/javascript">SyntaxHighlighter.defaults['gutter'] = false;
+    (make-level-entry *level6_lines* true)])</pre></td></tr><tr><td class="spacer docs">&nbsp;</td><td class="codes" /></tr><tr><td class="docs"><div class="docs-header"><a class="anchor" href="#tempest.path" name="tempest.path"><h1 class="project-name">tempest.path</h1><a class="toc-link" href="#toc">toc</a></a></div></td><td class="codes" /></tr><tr><td class="docs"><p>Functions related to path and coordinate creation and manipulation.</p>
+
+<p>   Functions in this module work with polar coordinates, cartesian coordinate,
+   and 'paths' consisting of a sequence of coordinates.</p>
+</td><td class="codes"><pre class="brush: clojure">(ns tempest.path
+  (:require [tempest.levels :as levels]
+            [tempest.util :as util]
+            [goog.dom :as dom]
+            [goog.math :as math]
+            [goog.events :as events]
+            [goog.events.KeyHandler :as key-handler]
+            [goog.events.KeyCodes :as key-codes]
+            [clojure.browser.repl :as repl]))</pre></td></tr><tr><td class="docs"><p>Given two polar coordinates, returns one polar coordinate with the first
+   elements (radii) summed, and the second elements (angles) subtracted.
+   i.e. [r1+r0, th1-th0].  This is used to move point0 to be relative to
+   point1.</p>
+</td><td class="codes"><pre class="brush: clojure">(defn add-sub
+  [point0 point1]
+  [(+ (first point1) (first point0))
+   (- (peek point1) (peek point0))])</pre></td></tr><tr><td class="docs"><p>Return cartesian coordinate 'point' in relation to 'origin'.</p>
+</td><td class="codes"><pre class="brush: clojure">(defn rebase-origin
+  [point origin]
+  (add-sub point origin))</pre></td></tr><tr><td class="docs"><p>Converts a polar coordinate (r,theta) into a cartesian coordinate (x,y)
+   centered on in a rectangle with given width and height.</p>
+</td><td class="codes"><pre class="brush: clojure">(defn polar-to-cartesian-centered
+  [point {width :width height :height}]
+  (rebase-origin (polar-to-cartesian-coords point) [(/ width 2) (/ height 2)]))</pre></td></tr><tr><td class="docs"><p>Converts polar coordinates to cartesian coordinates.  If optional length-fn
+   is specified, it is applied to the radius first.</p>
+</td><td class="codes"><pre class="brush: clojure">(defn polar-to-cartesian-coords
+  ([[r angle]] [(math/angleDx angle r) (math/angleDy angle r)])
+  ([[r angle] length-fn]
+     (let [newr (length-fn r)]
+       [(math/angleDx angle newr) (math/angleDy angle newr)])))</pre></td></tr><tr><td class="docs"><p>Rounds all numbers in a path (vector of 2-tuples) to nearest integer.</p>
+</td><td class="codes"><pre class="brush: clojure">(defn round-path-math
+  [path]
+  (map (fn [coords]
+         [(js/Math.round (first coords))
+          (js/Math.round (peek coords))])
+       path))</pre></td></tr><tr><td class="docs"><p>Rounds all numbers in a path (vector of 2-tuples) to nearest integer.
+   ONLY WORKS WITH POSITIVE NUMBERS.  Faster than round-path-math.</p>
+</td><td class="codes"><pre class="brush: clojure">(defn round-path-hack
+  [path]
+  (map (fn [[x y]]
+         [(js* &quot;~~&quot; (+ 0.5 x))
+          (js* &quot;~~&quot; (+ 0.5 y))])
+       path))</pre></td></tr><tr><td class="docs"><p>Use round-path-hack for now, since it's theoretically faster</p>
+</td><td class="codes"><pre class="brush: clojure">(def round-path round-path-hack)</pre></td></tr><tr><td class="docs"><p>Center a cartesian coordinate centered around (0,0) to be centered around
+   the middle of a rectangle with the given width and height.  It inverts y,
+   assuming that the input y is 'up', and in the output y is 'down', as is
+   the case with an HTML5 canvas.</p>
+</td><td class="codes"><pre class="brush: clojure">(defn point-to-canvas-coords
+  [{width :width height :height} p]
+  (let [xmid (/ width 2)
+        ymid (/ height 2)]
+    [(+ (first p) xmid) (- ymid (peek p))]))</pre></td></tr><tr><td class="docs"><p>Given a rectangle (vector of 4 cartesian coordinates) centered around (0,0),
+   this function shifts them to be centered around the center of an HTML5
+   canvas with the :width and :height set in dims.</p>
+</td><td class="codes"><pre class="brush: clojure">(defn rectangle-to-canvas-coords
+  [dims rect]
+  (map #(point-to-canvas-coords dims %) rect))</pre></td></tr><tr><td class="docs"><p>Returns vector [[x0 y0] [x1 y1] [x2 y2] [x3 y3]] describing segment's
+   rectangle in cartesian coordinates.</p>
+</td><td class="codes"><pre class="brush: clojure">(defn rectangle-for-segment
+  [level seg-idx]
+  (let [[seg0 seg1] (get (:segments level) seg-idx)
+        line0 (get (:lines level) seg0)
+        line1 (get (:lines level) seg1)]
+    [(polar-to-cartesian-coords line0)
+     (polar-to-cartesian-coords line0 (:length-fn level))
+     (polar-to-cartesian-coords line1 (:length-fn level))
+     (polar-to-cartesian-coords line1)]))</pre></td></tr><tr><td class="docs"><p>Returns current polar coordinates to the entity.</p>
+</td><td class="codes"><pre class="brush: clojure">(defn polar-entity-coord
+  [entity]
+  (let [steplen (step-length-segment-midpoint (:level entity)
+                                              (:segment entity))
+        offset (* steplen (:step entity))
+        midpoint (segment-midpoint (:level entity) (:segment entity))]
+    (polar-extend offset midpoint)))</pre></td></tr><tr><td class="docs"><p>Finds the 'step length' of a line through the middle of a level's segment.
+   This is how many pixels an entity should move per update to travel one
+   step.</p>
+</td><td class="codes"><pre class="brush: clojure">(defn step-length-segment-midpoint
+  [level seg-idx]
+  (/
+   (-
+    (first (segment-midpoint level seg-idx true))
+    (first (segment-midpoint level seg-idx false)))
+   (:steps level)))</pre></td></tr><tr><td class="docs"><p>Finds the 'step length' of a line along the edge of a level's segment.</p>
+</td><td class="codes"><pre class="brush: clojure">(defn step-length-segment-edge
+  [level line]
+  (/
+   (-
+    ((:length-fn level) (first line))
+    (first line))
+   (:steps level)))</pre></td></tr><tr><td class="docs"><p>Finds the 'step length' of an arbitrary line on the given level.</p>
+</td><td class="codes"><pre class="brush: clojure">(defn step-length-line
+  [level point0 point1]
+  (js/Math.abs
+   (/
+    (-
+     (first point0)
+     (first point1))
+    (:steps level))))</pre></td></tr><tr><td class="docs"><p>Returns a vector [len0 len1] with the 'step length' for the two edge
+   lines that mark the boundaries of the given segment.</p>
+</td><td class="codes"><pre class="brush: clojure">(defn step-lengths-for-segment-lines
+  [level seg-idx]
+  (let [coords (concat (polar-lines-for-segment level seg-idx false)
+                       (polar-lines-for-segment level seg-idx true))
+        line0 (take-nth 2 coords)
+        line1 (take-nth 2 (rest coords))]
+    [(apply #(step-length-line level %1 %2) line0)
+     (apply #(step-length-line level %1 %2) line1)]))</pre></td></tr><tr><td class="docs"><p>Returns distance between to points specified by polar coordinates.</p>
+</td><td class="codes"><pre class="brush: clojure">(defn polar-distance
+  [[r0 theta0] [r1 theta1]]
+  (js/Math.sqrt
+   (+
+    (js/Math.pow r0 2)
+    (js/Math.pow r1 2)
+    (* -2 r0 r1 (js/Math.cos (util/deg-to-rad (- theta1 theta0)))))))</pre></td></tr><tr><td class="docs"><p>Returns the radius to the midpoint of a line drawn between two polar
+   coordinates.</p>
+</td><td class="codes"><pre class="brush: clojure">(defn polar-midpoint-r
+  [[r0 theta0] [r1 theta1]]
+  (js/Math.round
+   (/
+    (js/Math.sqrt 
+     (+
+      (js/Math.pow r0 2)
+      (js/Math.pow r1 2)
+      (* 2 r0 r1 (js/Math.cos (util/deg-to-rad (- theta1 theta0))))))
+    2)))</pre></td></tr><tr><td class="docs"><p>Returns the angle to the midpoint of a line drawn between two polar
+   coordinates.</p>
+</td><td class="codes"><pre class="brush: clojure">(defn polar-midpoint-theta
+  [[r0 theta0] [r1 theta1]]
+  (js/Math.round
+   (mod
+    (+ (util/rad-to-deg
+        (js/Math.atan2
+         (+
+          (* r0 (js/Math.sin (util/deg-to-rad theta0)))
+          (* r1 (js/Math.sin (util/deg-to-rad theta1))))
+         (+
+          (* r0 (js/Math.cos (util/deg-to-rad theta0)))
+          (* r1 (js/Math.cos (util/deg-to-rad theta1))))))
+       360) 360)))</pre></td></tr><tr><td class="docs"><p>Returns polar coordinate representing the midpoint between the two
+   points specified.  This can be used to draw a line down the middle
+   of a level segment -- the line that entities should follow.</p>
+</td><td class="codes"><pre class="brush: clojure">(defn polar-midpoint
+  [point0 point1]
+  [(polar-midpoint-r point0 point1)
+   (polar-midpoint-theta point0 point1)])</pre></td></tr><tr><td class="docs"><p>Given a level and a segment index, returns the midpoint of the segment.
+   scaled? determines whether it gives you the inner (false) or outer (true)
+   point.</p>
+</td><td class="codes"><pre class="brush: clojure">(defn segment-midpoint
+  [level seg-idx scaled?]
+  (apply polar-midpoint
+         (polar-lines-for-segment level seg-idx scaled?)))</pre></td></tr><tr><td class="docs"><p>Return a polar coordinate with the first element (radius) scaled using
+   the function scalefn</p>
+</td><td class="codes"><pre class="brush: clojure">(defn scale-polar-coord
+  [scalefn coord]
+  [(scalefn (first coord)) (peek coord)])</pre></td></tr><tr><td class="docs"><p>Add 'length' to radius of polar coordinate.</p>
+</td><td class="codes"><pre class="brush: clojure">(defn polar-extend
+  [length coord]
+  [(+ length (first coord))
+   (peek coord)])</pre></td></tr><tr><td class="docs"><p>Returns vector [line0 line1], where lineN is a polar coordinate describing
+   the line from origin (canvas midpoint) that would draw the edges of a level
+   segment.</p>
+
+<p>   'scaled?' sets whether you want the unscaled, inner point, or the
+   outer point scaled with the level's scale function.</p>
+
+<p>   To actually draw a level's line, you would move to the unscaled point
+   without drawing, and then draw to the scaled point.</p>
+</td><td class="codes"><pre class="brush: clojure">(defn polar-lines-for-segment
+  [level seg-idx scaled?]
+  (let [[seg0 seg1] (get (:segments level) seg-idx)
+        line0 (get (:lines level) seg0)
+        line1 (get (:lines level) seg1)]
+    (if (true? scaled?)
+      [(scale-polar-coord (:length-fn level) line0)
+       (scale-polar-coord (:length-fn level) line1)]
+      [line0 line1])))</pre></td></tr><tr><td class="docs"><p>Path, in polar coordinates, describing the player's ship.</p>
+
+<p>Path that defines player.</p>
+</td><td class="codes"><pre class="brush: clojure">(def 
+  *player-path*
+  [[40 90]
+   [44 196]
+   [27 333]
+   [17 135]
+   [30 11]
+   [30 349]
+   [17 225]
+   [27 27]
+   [44 164]])</pre></td></tr><tr><td class="docs"><p>Returns the path of polar coordinates to draw the player correctly at its
+   current location.  It corrects for size and angle.</p>
+</td><td class="codes"><pre class="brush: clojure">(defn player-path-on-level
+  [player]
+  (let [coord (polar-entity-coord player)]
+    (scale-path 0.6 (rotate-path
+     (enemy-angle player)
+     *player-path*))))</pre></td></tr><tr><td class="docs"><p>Returns the path of polar coordinates to draw a flipper correctly at its
+   current location.  It corrects for size and angle.</p>
+</td><td class="codes"><pre class="brush: clojure">(defn flipper-path-on-level
+  [flipper]
+  (let [coord (polar-entity-coord flipper)]
+    (rotate-path
+     (enemy-angle flipper)
+     (flipper-path-with-width (* 0.8 (entity-desired-width flipper))))))</pre></td></tr><tr><td class="docs"><p>Returns the path of polar coordinates to draw a projectile correctly at its
+   current location.  It corrects for size and angle.</p>
+</td><td class="codes"><pre class="brush: clojure">(defn projectile-path-on-level
+  [projectile]
+  (let [coord (polar-entity-coord projectile)]
+    (rotate-path
+     (enemy-angle projectile)
+     (projectile-path-with-width (* 0.3 (entity-desired-width projectile))))))</pre></td></tr><tr><td class="docs"><p>Returns a path to draw a 'flipper' enemy with given width.</p>
+</td><td class="codes"><pre class="brush: clojure">(defn flipper-path-with-width
+  [width]
+  (let [r (/ width (js/Math.cos (util/deg-to-rad 16)))]
+    [[0 0]
+     [(/ r 2) 16]
+     [(/ r 4) 214]
+     [(/ r 4) 326]
+     [r 164]
+     [(/ r 4) 326]
+     [(/ r 4) 214]
+     [(/ r 2) 16]]))</pre></td></tr><tr><td class="docs"><p>Returns a path to draw a projectile with the given width.</p>
+</td><td class="codes"><pre class="brush: clojure">(defn projectile-path-with-width
+  [width]
+  (let [r (/ width (* 2 (js/Math.cos (util/deg-to-rad 45))))
+        midheight (* r (js/Math.sin (util/deg-to-rad 45)))]
+    [[midheight 270]
+     [r 45]
+     [r 135]
+     [r 225]
+     [r 315]]))</pre></td></tr><tr><td class="docs"><p>Add angle to all polar coordinates in path.</p>
+</td><td class="codes"><pre class="brush: clojure">(defn rotate-path
+  [angle path]
+  (map (fn [coords]
+         [(first coords)
+          (mod (+ angle (peek coords)) 360)])
+       path))</pre></td></tr><tr><td class="docs"><p>Multiply all lengths of polar coordinates in path by scale.</p>
+</td><td class="codes"><pre class="brush: clojure">(defn scale-path
+  [scale path]
+  (map (fn [coords]
+         [(* scale (first coords))
+          (peek coords)])
+       path))</pre></td></tr><tr><td class="docs"><p>Add 'length' to all polar coordinates in path</p>
+</td><td class="codes"><pre class="brush: clojure">(defn path-extend
+  [length path]
+  (map #(polar-extend length %) path))</pre></td></tr><tr><td class="docs"><p>Returns the angle from origin that the enemy needs to be rotated to
+   appear in the correct orientation at its current spot on the level.
+   In reality, it returns the angle of the line that traverses the segment
+   across the midpoint of the enemy.  TODO: This should be renamed to
+   'entity-angle', it works with anything on the board.</p>
+</td><td class="codes"><pre class="brush: clojure">(defn enemy-angle
+  [enemy]
+  (let [edges (polar-lines-for-segment (:level enemy)
+                                       (:segment enemy)
+                                       false)
+        edge-steps (step-lengths-for-segment-lines (:level enemy)
+                                                   (:segment enemy))
+        offset0 (* (first edge-steps) (:step enemy))
+        offset1 (* (peek edge-steps) (:step enemy))
+        point0 (polar-extend offset0 (first edges))
+        point1 (polar-extend offset1 (peek edges))]
+    (util/rad-to-deg
+     (apply js/Math.atan2
+            (vec (reverse (map - (polar-to-cartesian-coords point0)
+                      (polar-to-cartesian-coords point1))))))))</pre></td></tr><tr><td class="docs"><p>Returns how wide the given enemy should be drawn to span the full width
+   of its current location.  In reality, that means returning the length of
+   the line that spans the level segment, cutting through the enemy's
+   midpoint.  TODO: rename this entity-desired-width.</p>
+</td><td class="codes"><pre class="brush: clojure">(defn entity-desired-width
+  [enemy]
+  (let [edges (polar-lines-for-segment (:level enemy)
+                                       (:segment enemy)
+                                       false)
+        edge-steps (step-lengths-for-segment-lines (:level enemy)
+                                                   (:segment enemy))
+        offset0 (* (first edge-steps) (:step enemy))
+        offset1 (* (peek edge-steps) (:step enemy))
+        point0 (polar-extend offset0 (first edges))
+        point1 (polar-extend offset1 (peek edges))]
+    (polar-distance point0 point1)))</pre></td></tr><tr><td class="spacer docs">&nbsp;</td><td class="codes" /></tr><tr><td class="docs"><div class="docs-header"><a class="anchor" href="#tempest.util" name="tempest.util"><h1 class="project-name">tempest.util</h1><a class="toc-link" href="#toc">toc</a></a></div></td><td class="codes" /></tr><tr><td class="docs"><p>Small utility and math helper functions.</p>
+</td><td class="codes"><pre class="brush: clojure">(ns tempest.util)</pre></td></tr><tr><td class="docs"><p>Convert radians to degrees</p>
+</td><td class="codes"><pre class="brush: clojure">(defn rad-to-deg
+  [rad]
+  (/ (* rad 180) 3.14159265358979))</pre></td></tr><tr><td class="docs"><p>Convert degrees to radians</p>
+</td><td class="codes"><pre class="brush: clojure">(defn deg-to-rad
+  [deg]
+  (/ (* deg 3.14159265358979) 180))</pre></td></tr><tr><td class="docs"><p>Perform quick rounding of given number.  ONLY WORKS WITH POSITIVE NUMBERS.</p>
+</td><td class="codes"><pre class="brush: clojure">(defn round
+  [num]
+  (js* &quot;~~&quot; (+ 0.5 num)))</pre></td></tr><tr><td class="spacer docs">&nbsp;</td><td class="codes" /></tr></table><div class="footer">Generated by <a href="https://github.com/fogus/marginalia">Marginalia</a>.&nbsp;&nbsp;Syntax highlighting provided by Alex Gorbatchev's <a href="http://alexgorbatchev.com/SyntaxHighlighter/">SyntaxHighlighter</a></div><script type="text/javascript">SyntaxHighlighter.defaults['gutter'] = false;
        SyntaxHighlighter.all()</script></body></html>
