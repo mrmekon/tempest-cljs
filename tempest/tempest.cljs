@@ -74,7 +74,8 @@
 ;;
 
 ;; Path that defines player.
-(def player-path
+(def ^{:doc "Path, in polar coordinates, describing the player's ship."}
+  *player-path*
   [[40 90]
    [44 196]
    [27 333]
@@ -85,7 +86,8 @@
    [27 27]
    [44 164]])
 
-
+(def ^{:doc "Boolean flag to mark if the game is paused."}
+  *paused* (atom false))
 
 (defn round-path-math
   "Rounds all numbers in a path (vector of 2-tuples) to nearest integer."
@@ -308,7 +310,7 @@
   (let [coord (polar-entity-coord player)]
     (scale-path 0.6 (rotate-path
      (enemy-angle player)
-     player-path))))
+     *player-path*))))
 
 (defn flipper-path-on-level
   "Returns the path of polar coordinates to draw a flipper correctly at its
@@ -871,6 +873,16 @@
       )))
 
 (defn animationFrameMethod []
+  "Returns a callable javascript function to schedule a frame to be drawn.
+   Tries to use requestAnimationFrame, or the browser-specific version of
+   it that is available.  Falls back on setTimeout if requestAnimationFrame
+   is not available on player's browser.
+
+   requestAnimationFrame tries to figure out a consistent framerate based
+   on how long frame takes to render.
+
+   The setTimeout fail-over is hard-coded to attempt 30fps.
+   "
   (let [window (dom/getWindow)
         names ["requestAnimationFrame"
                "webkitRequestAnimationFrame"
@@ -885,9 +897,11 @@
         :else (recur remaining)))
      options)))
 
-(def *paused* (atom false))
-
-(def *animMethod* (animationFrameMethod))
+(def ^{:doc
+       "Stores the frame-scheduling function for the current browser.
+        This function should be called at the end of each frame to
+        schedule the next frame to be drawn at the appropriate time."}
+  *animMethod* (animationFrameMethod))
 
 (defn ^:export canvasDraw
   "Begins a camge of tempest.  'level' specified as a string representation
