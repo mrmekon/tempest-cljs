@@ -355,12 +355,112 @@ the player's ship, enemies, and projectiles.
     :projectile-list '()
     :player '()
     :context nil
-    :dims nil
+    :anim-fn identity
+    :dims {:width 0 :height 0}
     :level nil
     :frame-count 0
     :frame-time 0
     :paused? false
     }))
+
+(defn game-loop
+  [initial-game-state]
+  (loop [game-state initial-game-state]
+    (recur (update-game game-state))))
+
+(defn clear-frame
+  [game-state]
+  (let [{context :context
+         {width :width height :height} :dims}
+        game-state]
+    (.clearRect context 0 0 (:width dims) (:height dims))
+    game-state))
+
+(defn render-frame
+  [game-state]
+  (let [{context :context
+         dims :dims
+         level :level
+         enemy-list :enemy-list
+         projectile-list :projectile-list
+         player :player}
+        game-state]
+    (.clearRect context 0 0 (:width dims) (:height dims))
+    (draw/draw-player context dims level player)
+    (draw/draw-entities context dims level enemy-list)
+    (draw/draw-entities context dims level projectile-list)
+    game-state))
+
+(defn remove-collided-entities
+  [game-state]
+  (let [{enemy-list :enemy-list
+         projectile-list :projectile-list}
+        game-state]
+    (let [{plist :projectiles elist :entities}
+          (entities-after-collisions enemy-list projectile-list)]
+      (assoc game-state
+        :projectile-list plist
+        :enemy-list elist))))
+
+(defn update-projectile-locations
+  [game-state]
+  (let [{projectile-list :projectile-list} game-state]
+    (assoc game-state
+      :projectile-list (-> projectile-list
+                           update-entity-list
+                           (partial remove projectile-off-level?)))))
+
+(defn update-enemy-locations
+  [game-state]
+  (let [{enemy-list :enemy-list} game-state]
+    (assoc game-state :enemy-list (update-entity-list enemy-list))))
+
+(defn schedule-next-frame
+  [game-state]
+  (let [{context :context
+         dims :dims
+         level :level
+         anim-fn :anim-fn}
+        game-state]
+    (anim-fn #(update-game! context dims level))))
+
+(defn update-frame-count
+  [game-state]
+  (let [{frame-count :frame-count
+         frame-time :frame-time}
+        game-state]
+    (assoc game-state :frame-count (inc frame-count))))
+
+(defn render-fps-display
+  [game-state]
+  (let [{frame-count :frame-count
+         frame-time :frame-time}
+        game-state
+        fps (/ (* 1000 frame-count) (- (goog.now) frame-time))
+        str-fps (pr-str (util/round fps))]
+    (dom/setTextContent (dom/getElement "fps") (str "FPS: " str-fps))
+    (assoc game-state
+      :frame-count 0
+      :frame-time (goog.now))))
+
+(defn maybe-render-fps-display
+  [game-state]
+  (if (= (:frame-count game-state) 20)
+    (render-fps-display game-state)
+    game-state))
+
+(defn next-game-state
+  [game-state]
+  (->> game-state
+       clear-frame
+       render-frame
+       remove-collided-entities
+       update-projectile-locations
+       update-enemy-locations
+       update-frame-count
+       maybe-render-fps-display
+       schedule-next-frame
+       ))
 
 (defn update-game!
   "Call all of the drawing functions to redraw the scene, and update all
@@ -368,6 +468,7 @@ the player's ship, enemies, and projectiles.
   [context dims level]
   (doseq []
     (.clearRect context 0 0 (:width dims) (:height dims))
+    
     (draw/draw-player context dims level (deref *player*))
     (draw/draw-entities context dims level @*enemy-list*)
     (draw/draw-entities context dims level @*projectile-list*)
