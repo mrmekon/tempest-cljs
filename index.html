@@ -1,5 +1,7 @@
 <!DOCTYPE html>
-<html><head><meta charset="utf-8" content="text/html" http-equiv="Content-Type" /><meta content="Clone of Tempest vector-graphic arcade game." name="description" /><style type="text/css">/**
+<html><head><meta charset="utf-8" content="text/html" http-equiv="Content-Type" /><meta content="Clone of Tempest vector-graphic arcade game.
+                Written in ClojureScript, and uses HTML5 2D canvas
+                for display." name="description" /><style type="text/css">/**
  * SyntaxHighlighter
  * http://alexgorbatchev.com/SyntaxHighlighter
  *
@@ -3028,7 +3030,9 @@ net.brehaut.ClojureTools = (function (SH) {
     build_tree: build_tree
   };
 })(SyntaxHighlighter);
-</script><title>tempest-cljs -- Marginalia</title></head><body><table><tr><td class="docs"><div class="header"><h1 class="project-name">tempest-cljs</h1><h2 class="project-version">0.1.1-SNAPSHOT</h2><br /><p>Clone of Tempest vector-graphic arcade game.</p>
+</script><title>tempest-cljs -- Marginalia</title></head><body><table><tr><td class="docs"><div class="header"><h1 class="project-name">tempest-cljs</h1><h2 class="project-version">0.1.2-SNAPSHOT</h2><br /><p>Clone of Tempest vector-graphic arcade game.
+                Written in ClojureScript, and uses HTML5 2D canvas
+                for display.</p>
 </div><div class="dependencies"><h3>dependencies</h3><table><tr><td class="dep-name">org.clojure/clojure</td><td class="dotted"><hr /></td><td class="dep-version">1.3.0</td></tr><tr><td class="dep-name">noir</td><td class="dotted"><hr /></td><td class="dep-version">1.2.1</td></tr></table></div><div class="dependencies"><h3>dev dependencies</h3><table><tr><td class="dep-name">lein-marginalia</td><td class="dotted"><hr /></td><td class="dep-version">0.7.0-SNAPSHOT</td></tr></table></div></td><td class="codes" style="text-align: center; vertical-align: middle;color: #666;padding-right:20px"><br /><br /><br />(this space intentionally left almost blank)</td></tr><tr><td class="docs"><div class="toc"><a name="toc"><h3>namespaces</h3></a><ul><li><a href="#tempest.macros">tempest.macros</a></li><li><a href="#tempest">tempest</a></li><li><a href="#tempest.core">tempest.core</a></li><li><a href="#tempest.draw">tempest.draw</a></li><li><a href="#tempest.levels">tempest.levels</a></li><li><a href="#tempest.path">tempest.path</a></li><li><a href="#tempest.util">tempest.util</a></li></ul></div></td><td class="codes">&nbsp;</td></tr><tr><td class="docs"><div class="docs-header"><a class="anchor" href="#tempest.macros" name="tempest.macros"><h1 class="project-name">tempest.macros</h1><a class="toc-link" href="#toc">toc</a></a></div></td><td class="codes" /></tr><tr><td class="docs"><p>Macros for Tempest, in separate namespace because of ClojureScript
    limitation.</p>
 </td><td class="codes"><pre class="brush: clojure">(ns tempest.macros)</pre></td></tr><tr><td class="docs"><p>Log time taken to run given expressions to javascript console.</p>
@@ -3039,19 +3043,14 @@ net.brehaut.ClojureTools = (function (SH) {
        ~@body
        (.log js/console
              (str &quot;Fn time: &quot; (pr-str (- (goog.now) starttime#)) &quot; ms&quot;)))))</pre></td></tr><tr><td class="spacer docs">&nbsp;</td><td class="codes" /></tr><tr><td class="docs"><div class="docs-header"><a class="anchor" href="#tempest" name="tempest"><h1 class="project-name">tempest</h1><a class="toc-link" href="#toc">toc</a></a></div></td><td class="codes" /></tr><tr><td class="docs"><p>Publicly exported functions to embed Tempest game in HTML.</p>
-</td><td class="codes"><pre class="brush: clojure">(ns tempest
+</td><td class="codes"><pre class="brush: clojure">(ns 
+  tempest
   (:require [tempest.levels :as levels]
-            [tempest.util :as util]
             [tempest.draw :as draw]
             [tempest.core :as c]
             [goog.dom :as dom]
-            [goog.Timer :as timer]
             [goog.events :as events]
-            [goog.math :as math]
-            [goog.events.KeyHandler :as key-handler]
-            [goog.events.KeyCodes :as key-codes]
-            [clojure.browser.repl :as repl])
-  (:require-macros [tempest.macros :as macros]))</pre></td></tr><tr><td class="docs"><h2>Design notes:</h2>
+            [goog.events.KeyHandler :as key-handler]))</pre></td></tr><tr><td class="docs"><h2>Design notes:</h2>
 
 <ul>
 <li>Nearly everything is defined with polar coordinates (length and angle)</li>
@@ -3113,7 +3112,6 @@ normal to the segment's top line.</li>
 </td><td class="codes"><pre class="brush: clojure">(defn ^:export canvasDraw
   [level]
   (let [document (dom/getDocument)
-        timer (goog.Timer. 20)
         level (get levels/*levels* (- (js/parseInt level) 1))
         canvas (dom/getElement &quot;canv-fg&quot;)
         context (.getContext canvas &quot;2d&quot;)
@@ -3121,62 +3119,91 @@ normal to the segment's top line.</li>
         bgcontext (.getContext bgcanvas &quot;2d&quot;)
         handler (goog.events.KeyHandler. document)
         dims {:width (.-width canvas) :height (.-height canvas)}]
-    (.log js/console (str &quot;Animation function: &quot; (pr-str *animMethod*)))
-    (reset! c/*player* (c/build-player level 7))
-    (reset! c/*enemy-list*
-            (list
-             (c/build-enemy level 0 :step 0)
-             (c/build-enemy level 1 :step 0)
-             (c/build-enemy level 1 :step 10)
-             (c/build-enemy level 1 :step 20)
-             (c/build-enemy level 1 :step 30)
-             (c/build-enemy level 1 :step 40)
-             (c/build-enemy level 1 :step 50)
-             (c/build-enemy level 1 :step 60)
-             (c/build-enemy level 1 :step 70)
-             (c/build-enemy level 3 :step 0)
-             (c/build-enemy level 3 :step 10)
-             (c/build-enemy level 3 :step 20)
-             (c/build-enemy level 3 :step 30)
-             (c/build-enemy level 3 :step 40)
-             (c/build-enemy level 3 :step 50)
-             (c/build-enemy level 3 :step 60)
-             (c/build-enemy level 3 :step 70)
-             (c/build-enemy level 7 :step 0)
-             (c/build-enemy level 7 :step 10)
-             (c/build-enemy level 7 :step 20)
-             (c/build-enemy level 7 :step 30)
-             (c/build-enemy level 7 :step 40)
-             (c/build-enemy level 7 :step 50)
-             (c/build-enemy level 8 :step 0)
-             (c/build-enemy level 8 :step 10)
-             (c/build-enemy level 8 :step 20)
-             (c/build-enemy level 8 :step 30)
-             (c/build-enemy level 8 :step 40)
-             (c/build-enemy level 8 :step 50)
-             (c/build-enemy level 8 :step 60)
-             (c/build-enemy level 11 :step 10)))
+    (.log js/console (str &quot;Animation function: &quot; (pr-str c/*animMethod*)))
     (draw/draw-board bgcontext dims level)
-    (c/*animMethod* #(c/update-game! context dims level))
-    (events/listen handler &quot;key&quot; (fn [e] (c/keypress e)))))</pre></td></tr><tr><td class="spacer docs">&nbsp;</td><td class="codes" /></tr><tr><td class="docs"><div class="docs-header"><a class="anchor" href="#tempest.core" name="tempest.core"><h1 class="project-name">tempest.core</h1><a class="toc-link" href="#toc">toc</a></a></div></td><td class="codes" /></tr><tr><td class="docs"><p>Functions related to the game of tempest, and game state.</p>
+    (events/listen handler &quot;key&quot; (fn [e] (c/queue-keypress e)))
+    (let [empty-game-state (c/build-game-state)
+          game-state (assoc empty-game-state
+                       :player (c/build-player level 7)
+                       :level level
+                       :context context
+                       :dims dims
+                       :anim-fn (c/animationFrameMethod)
+                       :enemy-list (list
+                                    (c/build-enemy level 0 :step 0)
+                                    (c/build-enemy level 8 :step 60)
+                                    (c/build-enemy level 1 :step 0)
+                                    (c/build-enemy level 1 :step 10)
+                                    (c/build-enemy level 1 :step 20)
+                                    (c/build-enemy level 1 :step 30)
+                                    (c/build-enemy level 1 :step 40)
+                                    (c/build-enemy level 1 :step 50)
+                                    (c/build-enemy level 1 :step 60)
+                                    (c/build-enemy level 1 :step 70)
+                                    (c/build-enemy level 3 :step 0)
+                                    (c/build-enemy level 3 :step 10)
+                                    (c/build-enemy level 3 :step 20)
+                                    (c/build-enemy level 3 :step 30)
+                                    (c/build-enemy level 3 :step 40)
+                                    (c/build-enemy level 3 :step 50)
+                                    (c/build-enemy level 3 :step 60)
+                                    (c/build-enemy level 3 :step 70)
+                                    (c/build-enemy level 7 :step 0)
+                                    (c/build-enemy level 7 :step 10)
+                                    (c/build-enemy level 7 :step 20)
+                                    (c/build-enemy level 7 :step 30)
+                                    (c/build-enemy level 7 :step 40)
+                                    (c/build-enemy level 7 :step 50)
+                                    (c/build-enemy level 8 :step 0)
+                                    (c/build-enemy level 8 :step 10)
+                                    (c/build-enemy level 8 :step 20)
+                                    (c/build-enemy level 8 :step 30)
+                                    (c/build-enemy level 8 :step 40)
+                                    (c/build-enemy level 8 :step 50)
+                                    (c/build-enemy level 11 :step 10)))]
+      (c/next-game-state game-state))))</pre></td></tr><tr><td class="spacer docs">&nbsp;</td><td class="codes" /></tr><tr><td class="docs"><div class="docs-header"><a class="anchor" href="#tempest.core" name="tempest.core"><h1 class="project-name">tempest.core</h1><a class="toc-link" href="#toc">toc</a></a></div></td><td class="codes" /></tr><tr><td class="docs"><p>Functions related to the game of tempest, and game state.</p>
 
-<p>   Functions in this module create the game state, and modify it based on
-   player actions or time.  This includes management of entities such as
-   the player's ship, enemies, and projectiles.</p>
-</td><td class="codes"><pre class="brush: clojure">(ns tempest.core
+<p>Functions in this module create the game state, and modify it based on
+player actions or time.  This includes management of entities such as
+the player's ship, enemies, and projectiles.</p>
+</td><td class="codes"><pre class="brush: clojure">(ns 
+  tempest.core
   (:require [tempest.levels :as levels]
             [tempest.util :as util]
             [tempest.draw :as draw]
             [tempest.path :as path]
             [goog.dom :as dom]
-            [goog.math :as math]
             [goog.events :as events]
-            [goog.events.KeyHandler :as key-handler]
             [goog.events.KeyCodes :as key-codes]
             [clojure.browser.repl :as repl]))</pre></td></tr><tr><td class="docs">
-</td><td class="codes"><pre class="brush: clojure">(repl/connect &quot;http://localhost:9000/repl&quot;)</pre></td></tr><tr><td class="docs"><p>Boolean flag to mark if the game is paused.</p>
+</td><td class="codes"><pre class="brush: clojure">(repl/connect &quot;http://localhost:9000/repl&quot;)</pre></td></tr><tr><td class="docs"><p>Global queue for storing player's keypresses.  The browser
+        sticks keypresses in this queue via callback, and keys are
+        later pulled out and applied to the game state during the
+        game logic loop.</p>
 </td><td class="codes"><pre class="brush: clojure">(def 
-  *paused* (atom false))</pre></td></tr><tr><td class="docs"><p>Returns a dictionary describing a projectile (bullet) on the given level,
+  *key-event-queue* (atom '()))</pre></td></tr><tr><td class="docs"><hr />
+</td><td class="codes"></td></tr><tr><td class="docs"><p><strong>Main logic loop</strong></p>
+
+<p>Given the current game-state, threads it through a series of functions that
+calculate the next game-state.  This is the most fundamental call in the
+game; it applies all of the logic.</p>
+
+<p>The last call, schedule-next-frame, schedules this function to be called
+again by the browser sometime in the future with the update game-state
+after passing through all the other functions.  This implements the game loop.</p>
+</td><td class="codes"><pre class="brush: clojure">(defn next-game-state
+  [game-state]
+  (-&gt;&gt; game-state
+       dequeue-keypresses
+       clear-frame
+       render-frame
+       remove-collided-entities
+       update-projectile-locations
+       update-enemy-locations
+       update-frame-count
+       maybe-render-fps-display
+       schedule-next-frame))</pre></td></tr><tr><td class="docs"><hr />
+</td><td class="codes"></td></tr><tr><td class="docs"><p>Returns a dictionary describing a projectile (bullet) on the given level,
    in the given segment, with a given stride (steps per update to move, with
    negative meaning in and positive meaning out), and given step to start on.</p>
 </td><td class="codes"><pre class="brush: clojure">(defn build-projectile
@@ -3196,7 +3223,9 @@ normal to the segment's top line.</li>
    :segment seg-idx
    :path-fn path/flipper-path-on-level
    :level level
-   :hits-remaining 1})</pre></td></tr><tr><td class="docs"><p>Returns a dictionary describing a player on the given level and segment.</p>
+   :hits-remaining 1
+   :bounding-fn path/flipper-path-bounding-box
+   })</pre></td></tr><tr><td class="docs"><p>Returns a dictionary describing a player on the given level and segment.</p>
 </td><td class="codes"><pre class="brush: clojure">(defn build-player
   [level seg-idx]
   {:segment seg-idx
@@ -3356,18 +3385,7 @@ normal to the segment's top line.</li>
             enemy-list))</pre></td></tr><tr><td class="docs"><p>Decrement hits-remaining count on given enemy.</p>
 </td><td class="codes"><pre class="brush: clojure">(defn decrement-enemy-hits
   [enemy]
-  (assoc enemy :hits-remaining (dec (:hits-remaining enemy))))</pre></td></tr><tr><td class="docs"><p>Old, replaced collision detection code</p>
-
-<p>Calls collisions-with-projectile for every projectile in bullet-list.
-   Returns a dictionary with true key for all enemies involved in a collision,
-   and a false key for all unaffected enemies.</p>
-</td><td class="codes"><pre class="brush: clojure">(defn remove-collided-enemies!
-  [bullet]
-  (def *enemy-list*
-    (atom (get (collisions-with-projectile @*enemy-list* bullet) false))))
-(defn collisions-with-projectile-list
-  [enemy-list bullet-list]
-  (doall (map remove-collided-enemies! bullet-list)))</pre></td></tr><tr><td class="docs"><p>Returns true if a projectile has reached either boundary of the level.</p>
+  (assoc enemy :hits-remaining (dec (:hits-remaining enemy))))</pre></td></tr><tr><td class="docs"><p>Returns true if a projectile has reached either boundary of the level.</p>
 </td><td class="codes"><pre class="brush: clojure">(defn projectile-off-level?
   [projectile]
   (cond
@@ -3375,15 +3393,14 @@ normal to the segment's top line.</li>
    (&gt;= (:step projectile) (:steps (:level projectile))) true
    :else false))</pre></td></tr><tr><td class="docs"><p>Add a new projectile to the global list of live projectiles, originating
    from the given player, on the segment he is currently on.</p>
-</td><td class="codes"><pre class="brush: clojure">(defn add-player-projectile!
-  [player]
+</td><td class="codes"><pre class="brush: clojure">(defn add-player-projectile
+  [projectile-list player]
   (let [level (:level player)
         seg-idx (:segment player)
         stride (:bullet-stride player)
         step (:steps level)]
-    (reset! *projectile-list*
-            (conj @*projectile-list*
-                  (build-projectile level seg-idx stride :step step)))))</pre></td></tr><tr><td class="docs"><p>Returns the segment to the left of the player.  Loops around the level
+    (conj projectile-list
+          (build-projectile level seg-idx stride :step step))))</pre></td></tr><tr><td class="docs"><p>Returns the segment to the left of the player.  Loops around the level
    on connected levels, and stops at 0 on unconnected levels.</p>
 </td><td class="codes"><pre class="brush: clojure">(defn segment-player-left
   [player]
@@ -3405,31 +3422,72 @@ normal to the segment's top line.</li>
         new-seg (inc cur-seg)]
     (if (&gt; new-seg seg-max)
       (if loops? 0 seg-max)
-      new-seg)))</pre></td></tr><tr><td class="docs"><p>Sets global <em>player</em>'s segment key to a new value.</p>
-</td><td class="codes"><pre class="brush: clojure">(defn set-global-player-segment!
-  [seg-idx]
-  (reset! *player* (assoc @*player* :segment seg-idx)))</pre></td></tr><tr><td class="docs"><p>Respond to keyboard key presses.</p>
-</td><td class="codes"><pre class="brush: clojure">(defn keypress
+      new-seg)))</pre></td></tr><tr><td class="docs"><p>Atomically queue keypress in global queue for later handling.  This should
+   be called as the browser's key-handling callback.</p>
+</td><td class="codes"><pre class="brush: clojure">(defn queue-keypress
   [event]
-  (let [player @*player*
-        key (.-keyCode event)]
+  (let [key (.-keyCode event)]
+    (swap! *key-event-queue* #(concat % [key]))))</pre></td></tr><tr><td class="docs"><p>Returns new game state updated to reflect the results of a player's
+   keypress.</p>
+
+<p>   ## Key map</p>
+
+<pre><code>   * Right -- Move counter-clockwise
+   * Left -- Move clockwise
+   * Space -- Shoot
+   * Escape -- Pause
+</code></pre>
+</td><td class="codes"><pre class="brush: clojure">(defn handle-keypress
+  [game-state key]
+  (let [player (:player game-state)
+        projectile-list (:projectile-list game-state)
+        paused? (:paused? game-state)]
     (condp = key
-      key-codes/RIGHT (set-global-player-segment!
-                       (segment-player-right player))
-      key-codes/LEFT (set-global-player-segment!
-                      (segment-player-left player))
-      key-codes/SPACE (add-player-projectile! player)
-      key-codes/ESC (def *paused* (atom (not @*paused*)))
-      nil)))</pre></td></tr><tr><td class="docs">
-</td><td class="codes"><pre class="brush: clojure">(defn animationFrameMethod []
-  &quot;Returns a callable javascript function to schedule a frame to be drawn.
-   Tries to use requestAnimationFrame, or the browser-specific version of
-   it that is available.  Falls back on setTimeout if requestAnimationFrame
-   is not available on player's browser.
-   requestAnimationFrame tries to figure out a consistent framerate based
-   on how long frame takes to render.
-   The setTimeout fail-over is hard-coded to attempt 30fps.
-   &quot;
+      key-codes/RIGHT (assoc game-state
+                        :player
+                        (assoc player :segment (segment-player-right player)))
+      key-codes/LEFT  (assoc game-state
+                        :player
+                        (assoc player :segment (segment-player-left player)))
+      key-codes/SPACE (assoc game-state
+                        :projectile-list
+                        (add-player-projectile projectile-list player))
+      key-codes/ESC (assoc game-state (not paused?))
+      game-state)))</pre></td></tr><tr><td class="docs"><p>Atomically dequeue keypresses from global queue and pass to handle-keypress,
+until global queue is empty.  Returns game state updated after applying
+all keypresses.</p>
+
+<p>Has a side effect of clearing global <em>key-event-queue</em>.</p>
+
+<h2>Implementation details:</h2>
+
+<p>Use compare-and-set! instead of swap! to test against the value we
+entered the loop with, instead of the current value.  compare-and-set!
+returns true only if the update was a success (i.e. the queue hasn't
+changed since entering the loop), in which case we handle the key.
+If the queue has changed, we do nothing.  The loop always gets called
+again with the current deref of the global state.</p>
+</td><td class="codes"><pre class="brush: clojure">(defn dequeue-keypresses
+  [game-state]
+  (loop [state game-state
+         queue @*key-event-queue*]
+    (if (empty? queue)
+      state
+      (let [key (first queue)
+            valid? (compare-and-set! *key-event-queue* queue (rest queue))]
+        (if valid?
+          (recur (handle-keypress state key) @*key-event-queue*)
+          (recur state @*key-event-queue*))))))</pre></td></tr><tr><td class="docs"><p>Returns a callable javascript function to schedule a frame to be drawn.
+Tries to use requestAnimationFrame, or the browser-specific version of
+it that is available.  Falls back on setTimeout if requestAnimationFrame
+is not available on player's browser.</p>
+
+<p>requestAnimationFrame tries to figure out a consistent framerate based
+on how long frame takes to render.</p>
+
+<p>The setTimeout fail-over is hard-coded to attempt 30fps.</p>
+</td><td class="codes"><pre class="brush: clojure">(defn animationFrameMethod
+  []
   (let [window (dom/getWindow)
         names [&quot;requestAnimationFrame&quot;
                &quot;webkitRequestAnimationFrame&quot;
@@ -3442,53 +3500,104 @@ normal to the segment's top line.</li>
         (nil? current) #((.-setTimeout window) % (/ 1000 30))
         (fn? (current)) (current)
         :else (recur remaining)))
-     options)))</pre></td></tr><tr><td class="docs"><p>Stores the frame-scheduling function for the current browser.
-        This function should be called at the end of each frame to
-        schedule the next frame to be drawn at the appropriate time.</p>
-</td><td class="codes"><pre class="brush: clojure">(def 
-  *animMethod* (animationFrameMethod))</pre></td></tr><tr><td class="docs">
-</td><td class="codes"><pre class="brush: clojure">(def *frame-count* (atom 0))
-(def *frame-time* (atom (goog.now)))
-(def *enemy-list* (atom (list)))
-(def *player* (atom (list)))
-(def *projectile-list* (atom (list)))</pre></td></tr><tr><td class="docs"><p>Call all of the drawing functions to redraw the scene, and update all
-   of the entities on the level.</p>
-</td><td class="codes"><pre class="brush: clojure">(defn update-game!
-  [context dims level]
-  (doseq []
-    (.clearRect context 0 0 (:width dims) (:height dims))
-    (draw/draw-player context dims level (deref *player*))
-    (draw/draw-entities context dims level @*enemy-list*)
-    (draw/draw-entities context dims level @*projectile-list*)
-    (when (not @*paused*)
-      (let [new-entities (entities-after-collisions @*enemy-list*
-                                                      @*projectile-list*)]
-        (def *projectile-list* (atom (:projectiles new-entities)))
-        (def *enemy-list* (atom (:entities new-entities))))
-      (def *projectile-list* (atom (update-entity-list @*projectile-list*)))
-      (def *projectile-list* (atom (remove projectile-off-level?
-                                           @*projectile-list*)))
-      (def *enemy-list* (atom (update-entity-list @*enemy-list*)))
-      (*animMethod* #(update-game! context dims level)))
-    (def *frame-count* (atom (inc @*frame-count*)))
-    (when (= 20 @*frame-count*)
-      (let [fps (/ (* 1000 @*frame-count*)
-                   (- (goog.now) @*frame-time*))]
-        (dom/setTextContent (dom/getElement &quot;fps&quot;)
-                            (str &quot;FPS: &quot; (pr-str (js/Math.round fps)))))
-      (def *frame-count* (atom 0))
-      (def *frame-time* (atom (goog.now))))))</pre></td></tr><tr><td class="spacer docs">&nbsp;</td><td class="codes" /></tr><tr><td class="docs"><div class="docs-header"><a class="anchor" href="#tempest.draw" name="tempest.draw"><h1 class="project-name">tempest.draw</h1><a class="toc-link" href="#toc">toc</a></a></div></td><td class="codes" /></tr><tr><td class="docs"><p>Functions related to drawing on an HTML5 canvas.</p>
+     options)))</pre></td></tr><tr><td class="docs"><p>Returns an empty game-state map.</p>
+</td><td class="codes"><pre class="brush: clojure">(defn build-game-state
+  []
+  {:enemy-list '()
+   :projectile-list '()
+   :player '()
+   :context nil
+   :anim-fn identity
+   :dims {:width 0 :height 0}
+   :level nil
+   :frame-count 0
+   :frame-time 0
+   :paused? false
+   })</pre></td></tr><tr><td class="docs"><p>Returns game state unmodified, clears the HTML5 canvas as a side-effect.</p>
+</td><td class="codes"><pre class="brush: clojure">(defn clear-frame
+  [game-state]
+  (let [{context :context
+         {width :width height :height} :dims}
+        game-state]
+    (.clearRect context 0 0 width height dims)
+    game-state))</pre></td></tr><tr><td class="docs"><p>Draws the current game-state on the HTML5 canvas.  Returns the game state
+   unmodified (drawing is a side-effect).</p>
+</td><td class="codes"><pre class="brush: clojure">(defn render-frame
+  [game-state]
+  (let [{context :context
+         dims :dims
+         level :level
+         enemy-list :enemy-list
+         projectile-list :projectile-list
+         player :player}
+        game-state]
+    (draw/draw-player context dims level player)
+    (draw/draw-entities context dims level enemy-list)
+    (draw/draw-entities context dims level projectile-list)
+    game-state))</pre></td></tr><tr><td class="docs"><p>Detects and removes projectiles that have collided with enemies, and enemies
+   whose hit counts have dropped to zero.  Returns updated game-state.</p>
+</td><td class="codes"><pre class="brush: clojure">(defn remove-collided-entities
+  [game-state]
+  (let [{enemy-list :enemy-list
+         projectile-list :projectile-list}
+        game-state]
+    (let [{plist :projectiles elist :entities}
+          (entities-after-collisions enemy-list projectile-list)]
+      (assoc game-state
+        :projectile-list plist
+        :enemy-list elist))))</pre></td></tr><tr><td class="docs"><p>Returns game-state with all projectiles updated to have new positions
+   based on their speeds and current position.</p>
+</td><td class="codes"><pre class="brush: clojure">(defn update-projectile-locations
+  [game-state]
+  (let [{projectile-list :projectile-list} game-state
+        rm-fn (partial remove projectile-off-level?)]
+    (assoc game-state
+      :projectile-list (-&gt; projectile-list
+                           update-entity-list
+                           rm-fn))))</pre></td></tr><tr><td class="docs"><p>Returns game-state with all of the enemies updated to have new positions
+   based on their speeds and current position.</p>
+</td><td class="codes"><pre class="brush: clojure">(defn update-enemy-locations
+  [game-state]
+  (let [{enemy-list :enemy-list} game-state]
+    (assoc game-state :enemy-list (update-entity-list enemy-list))))</pre></td></tr><tr><td class="docs"><p>Tells the player's browser to schedule the next frame to be drawn, using
+   whatever the best mechanism the browser has to do so.</p>
+</td><td class="codes"><pre class="brush: clojure">(defn schedule-next-frame
+  [game-state]
+  ((:anim-fn game-state) #(next-game-state game-state)))</pre></td></tr><tr><td class="docs"><p>Increments the game-state's frame counter, which is a count of frames since
+   the last FPS measurement.</p>
+</td><td class="codes"><pre class="brush: clojure">(defn update-frame-count
+  [game-state]
+  (let [{frame-count :frame-count}
+        game-state]
+    (assoc game-state :frame-count (inc frame-count))))</pre></td></tr><tr><td class="docs"><p>Print a string representation of the most recent FPS measurement in
+   an HTML element named 'fps'.  This resets the frame-count and frame-time
+   currently stored in the game state.</p>
+</td><td class="codes"><pre class="brush: clojure">(defn render-fps-display
+  [game-state]
+  (let [{frame-count :frame-count
+         frame-time :frame-time}
+        game-state
+        fps (/ (* 1000 frame-count) (- (goog.now) frame-time))
+        str-fps (pr-str (util/round fps))]
+    (dom/setTextContent (dom/getElement &quot;fps&quot;) (str &quot;FPS: &quot; str-fps))
+    (assoc game-state
+      :frame-count 0
+      :frame-time (goog.now))))</pre></td></tr><tr><td class="docs"><p>Calls render-fps-display if the frame-count is above a certain threshhold.</p>
+</td><td class="codes"><pre class="brush: clojure">(defn maybe-render-fps-display
+  [game-state]
+  (if (= (:frame-count game-state) 20)
+    (render-fps-display game-state)
+    game-state))</pre></td></tr><tr><td class="spacer docs">&nbsp;</td><td class="codes" /></tr><tr><td class="docs"><div class="docs-header"><a class="anchor" href="#tempest.draw" name="tempest.draw"><h1 class="project-name">tempest.draw</h1><a class="toc-link" href="#toc">toc</a></a></div></td><td class="codes" /></tr><tr><td class="docs"><p>Functions related to drawing on an HTML5 canvas.</p>
 
-<p>   The functions in this module are responsible for drawing paths on an
-   HTML5 canvas.  This includes both primitive draw functions, and higher
-   level functions to draw complete game entities using the primitives.</p>
-</td><td class="codes"><pre class="brush: clojure">(ns tempest.draw
+<p>The functions in this module are responsible for drawing paths on an
+HTML5 canvas.  This includes both primitive draw functions, and higher
+level functions to draw complete game entities using the primitives.</p>
+</td><td class="codes"><pre class="brush: clojure">(ns 
+  tempest.draw
   (:require [tempest.levels :as levels]
             [tempest.util :as util]
             [tempest.path :as path]
-            [goog.dom :as dom]
-            [goog.math :as math]
-            [clojure.browser.repl :as repl]))</pre></td></tr><tr><td class="docs"><p>Draws a rectangle (4 cartesian coordinates in a vector) on the 2D context
+            [goog.dom :as dom]))</pre></td></tr><tr><td class="docs"><p>Draws a rectangle (4 cartesian coordinates in a vector) on the 2D context
    of an HTML5 canvas.</p>
 </td><td class="codes"><pre class="brush: clojure">(defn draw-rectangle
   [context [p0 &amp; points]]
@@ -3566,7 +3675,8 @@ normal to the segment's top line.</li>
        (path/round-path (path/rectangle-to-canvas-coords
         dims (path/rectangle-for-segment level idx)))))
     (.closePath context)))</pre></td></tr><tr><td class="spacer docs">&nbsp;</td><td class="codes" /></tr><tr><td class="docs"><div class="docs-header"><a class="anchor" href="#tempest.levels" name="tempest.levels"><h1 class="project-name">tempest.levels</h1><a class="toc-link" href="#toc">toc</a></a></div></td><td class="codes" /></tr><tr><td class="docs"><p>Functions related to generating paths representing levels.</p>
-</td><td class="codes"><pre class="brush: clojure">(ns tempest.levels
+</td><td class="codes"><pre class="brush: clojure">(ns 
+  tempest.levels
   (:require [tempest.util :as util]))</pre></td></tr><tr><td class="docs"><h2>Level Terminology:</h2>
 
 <p><em>length</em> and <em>depth</em> both refer to how far from origin the inner
@@ -3765,17 +3875,14 @@ a list of angles.</p>
     (make-level-entry *level5_lines* false)
     (make-level-entry *level6_lines* true)])</pre></td></tr><tr><td class="spacer docs">&nbsp;</td><td class="codes" /></tr><tr><td class="docs"><div class="docs-header"><a class="anchor" href="#tempest.path" name="tempest.path"><h1 class="project-name">tempest.path</h1><a class="toc-link" href="#toc">toc</a></a></div></td><td class="codes" /></tr><tr><td class="docs"><p>Functions related to path and coordinate creation and manipulation.</p>
 
-<p>   Functions in this module work with polar coordinates, cartesian coordinate,
-   and 'paths' consisting of a sequence of coordinates.</p>
-</td><td class="codes"><pre class="brush: clojure">(ns tempest.path
+<p>Functions in this module work with polar coordinates, cartesian coordinate,
+and 'paths' consisting of a sequence of coordinates.</p>
+</td><td class="codes"><pre class="brush: clojure">(ns 
+  tempest.path
   (:require [tempest.levels :as levels]
             [tempest.util :as util]
             [goog.dom :as dom]
-            [goog.math :as math]
-            [goog.events :as events]
-            [goog.events.KeyHandler :as key-handler]
-            [goog.events.KeyCodes :as key-codes]
-            [clojure.browser.repl :as repl]))</pre></td></tr><tr><td class="docs"><p>Given two polar coordinates, returns one polar coordinate with the first
+            [goog.math :as math]))</pre></td></tr><tr><td class="docs"><p>Given two polar coordinates, returns one polar coordinate with the first
    elements (radii) summed, and the second elements (angles) subtracted.
    i.e. [r1+r0, th1-th0].  This is used to move point0 to be relative to
    point1.</p>
@@ -3954,14 +4061,24 @@ a list of angles.</p>
    [30 349]
    [17 225]
    [27 27]
-   [44 164]])</pre></td></tr><tr><td class="docs"><p>Returns the path of polar coordinates to draw the player correctly at its
+   [44 164]])</pre></td></tr><tr><td class="docs">
+</td><td class="codes"><pre class="brush: clojure">(defn bounding-box-from-radius
+  [origin radius]
+  (let [d (* radius 2)]
+    {:x (- (first origin) radius)
+     :y (- (peek origin) radius)
+     :width d
+     :height d}))</pre></td></tr><tr><td class="docs"><p>Returns the path of polar coordinates to draw the player correctly at its
    current location.  It corrects for size and angle.</p>
 </td><td class="codes"><pre class="brush: clojure">(defn player-path-on-level
   [player]
   (let [coord (polar-entity-coord player)]
     (scale-path 0.6 (rotate-path
      (enemy-angle player)
-     *player-path*))))</pre></td></tr><tr><td class="docs"><p>Returns the path of polar coordinates to draw a flipper correctly at its
+     *player-path*))))</pre></td></tr><tr><td class="docs"><p>Returns the radius of the bounding circle around the given flipper's path.</p>
+</td><td class="codes"><pre class="brush: clojure">(defn flipper-path-bounding-circle-radius
+  [path]
+  (max (map first path)))</pre></td></tr><tr><td class="docs"><p>Returns the path of polar coordinates to draw a flipper correctly at its
    current location.  It corrects for size and angle.</p>
 </td><td class="codes"><pre class="brush: clojure">(defn flipper-path-on-level
   [flipper]
@@ -4045,7 +4162,8 @@ a list of angles.</p>
         point0 (polar-extend offset0 (first edges))
         point1 (polar-extend offset1 (peek edges))]
     (polar-distance point0 point1)))</pre></td></tr><tr><td class="spacer docs">&nbsp;</td><td class="codes" /></tr><tr><td class="docs"><div class="docs-header"><a class="anchor" href="#tempest.util" name="tempest.util"><h1 class="project-name">tempest.util</h1><a class="toc-link" href="#toc">toc</a></a></div></td><td class="codes" /></tr><tr><td class="docs"><p>Small utility and math helper functions.</p>
-</td><td class="codes"><pre class="brush: clojure">(ns tempest.util)</pre></td></tr><tr><td class="docs"><p>Convert radians to degrees</p>
+</td><td class="codes"><pre class="brush: clojure">(ns 
+  tempest.util)</pre></td></tr><tr><td class="docs"><p>Convert radians to degrees</p>
 </td><td class="codes"><pre class="brush: clojure">(defn rad-to-deg
   [rad]
   (/ (* rad 180) 3.14159265358979))</pre></td></tr><tr><td class="docs"><p>Convert degrees to radians</p>
