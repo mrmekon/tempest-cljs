@@ -18,6 +18,41 @@ the player's ship, enemies, and projectiles.
 (repl/connect "http://localhost:9000/repl")
 
 
+(def ^{:doc
+       "Global queue for storing player's keypresses.  The browser
+        sticks keypresses in this queue via callback, and keys are
+        later pulled out and applied to the game state during the
+        game logic loop."}
+  *key-event-queue* (atom '()))
+
+;; ---
+
+(defn next-game-state
+  "**Main logic loop**
+
+Given the current game-state, threads it through a series of functions that
+calculate the next game-state.  This is the most fundamental call in the
+game; it applies all of the logic.
+
+The last call, schedule-next-frame, schedules this function to be called
+again by the browser sometime in the future with the update game-state
+after passing through all the other functions.  This implements the game loop.
+"
+  [game-state]
+  (->> game-state
+       dequeue-keypresses
+       clear-frame
+       render-frame
+       remove-collided-entities
+       update-projectile-locations
+       update-enemy-locations
+       update-frame-count
+       maybe-render-fps-display
+       schedule-next-frame
+       ))
+
+;; ---
+
 (defn build-projectile
   "Returns a dictionary describing a projectile (bullet) on the given level,
    in the given segment, with a given stride (steps per update to move, with
@@ -283,18 +318,6 @@ the player's ship, enemies, and projectiles.
       (if loops? 0 seg-max)
       new-seg)))
 
-(defn set-global-player-segment!
-  "Sets global *player*'s segment key to a new value."
-  [seg-idx]
-  (reset! *player* (assoc @*player* :segment seg-idx)))
-
-
-(def ^{:doc
-       "Global queue for storing player's keypresses.  The browser
-        sticks keypresses in this queue via callback, and keys are
-        later pulled out and applied to the game state during the
-        game logic loop."}
-  *key-event-queue* (atom '()))
 
 (defn queue-keypress
   "Atomically queue keypress in global queue for later handling.  This should
@@ -334,20 +357,20 @@ the player's ship, enemies, and projectiles.
 
 (defn dequeue-keypresses
   "Atomically dequeue keypresses from global queue and pass to handle-keypress,
-   until global queue is empty.  Returns game state updated after applying
-   all keypresses.
+until global queue is empty.  Returns game state updated after applying
+all keypresses.
 
-   Has a side effect of clearing global *key-event-queue*.
+Has a side effect of clearing global *key-event-queue*.
 
-   ### Implementation details:
+## Implementation details:
 
-   Use compare-and-set! instead of swap! to test against the value we
-   entered the loop with, instead of the current value.  compare-and-set!
-   returns true only if the update was a success (i.e. the queue hasn't
-   changed since entering the loop), in which case we handle the key.
-   If the queue has changed, we do nothing.  The loop always gets called
-   again with the current deref of the global state.
-  "
+Use compare-and-set! instead of swap! to test against the value we
+entered the loop with, instead of the current value.  compare-and-set!
+returns true only if the update was a success (i.e. the queue hasn't
+changed since entering the loop), in which case we handle the key.
+If the queue has changed, we do nothing.  The loop always gets called
+again with the current deref of the global state.
+"
   [game-state]
   (loop [state game-state
          queue @*key-event-queue*]
@@ -360,17 +383,18 @@ the player's ship, enemies, and projectiles.
           (recur state @*key-event-queue*))))))
 
 
-(defn animationFrameMethod []
+(defn animationFrameMethod
   "Returns a callable javascript function to schedule a frame to be drawn.
-   Tries to use requestAnimationFrame, or the browser-specific version of
-   it that is available.  Falls back on setTimeout if requestAnimationFrame
-   is not available on player's browser.
+Tries to use requestAnimationFrame, or the browser-specific version of
+it that is available.  Falls back on setTimeout if requestAnimationFrame
+is not available on player's browser.
 
-   requestAnimationFrame tries to figure out a consistent framerate based
-   on how long frame takes to render.
+requestAnimationFrame tries to figure out a consistent framerate based
+on how long frame takes to render.
 
-   The setTimeout fail-over is hard-coded to attempt 30fps.
-   "
+The setTimeout fail-over is hard-coded to attempt 30fps.
+"
+  []
   (let [window (dom/getWindow)
         names ["requestAnimationFrame"
                "webkitRequestAnimationFrame"
@@ -492,22 +516,4 @@ the player's ship, enemies, and projectiles.
   (if (= (:frame-count game-state) 20)
     (render-fps-display game-state)
     game-state))
-
-(defn next-game-state
-  "Given the current game-state, threads it through a series of functions that
-   calculate the next game-state.  This is the most fundamental call in the
-   game; it applies all of the logic."
-  [game-state]
-  (->> game-state
-       dequeue-keypresses
-       clear-frame
-       render-frame
-       remove-collided-entities
-       update-projectile-locations
-       update-enemy-locations
-       update-frame-count
-       maybe-render-fps-display
-       schedule-next-frame
-       ))
-
 
