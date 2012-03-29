@@ -10,6 +10,10 @@ Additionally, I developed the Tempest logic without much forethought.  It just m
 
 Game logic is written in ClojureScript, backend is in Clojure with the Noir framework.
 
+## Documentation
+
+[Marginalia Annotated Source](http://mrmekon.github.com/tempest-cljs/)
+
 ## Screenshots
 
 <img src="http://cloud.github.com/downloads/mrmekon/tempest-cljs/screenshot-action.png" />
