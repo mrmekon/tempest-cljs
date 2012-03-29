@@ -18,10 +18,6 @@ the player's ship, enemies, and projectiles.
 (repl/connect "http://localhost:9000/repl")
 
 
-(def ^{:doc "Boolean flag to mark if the game is paused."}
-  *paused* (atom false))
-
-
 (defn build-projectile
   "Returns a dictionary describing a projectile (bullet) on the given level,
    in the given segment, with a given stride (steps per update to move, with
@@ -249,18 +245,16 @@ the player's ship, enemies, and projectiles.
    (>= (:step projectile) (:steps (:level projectile))) true
    :else false))
 
-
-(defn add-player-projectile!
+(defn add-player-projectile
   "Add a new projectile to the global list of live projectiles, originating
    from the given player, on the segment he is currently on."
-  [player]
+  [projectile-list player]
   (let [level (:level player)
         seg-idx (:segment player)
         stride (:bullet-stride player)
         step (:steps level)]
-    (reset! *projectile-list*
-            (conj @*projectile-list*
-                  (build-projectile level seg-idx stride :step step)))))
+    (conj projectile-list
+          (build-projectile level seg-idx stride :step step))))
 
 (defn segment-player-left
   "Returns the segment to the left of the player.  Loops around the level
@@ -294,20 +288,77 @@ the player's ship, enemies, and projectiles.
   [seg-idx]
   (reset! *player* (assoc @*player* :segment seg-idx)))
 
-(defn keypress
-  "Respond to keyboard key presses."
+
+(def ^{:doc
+       "Global queue for storing player's keypresses.  The browser
+        sticks keypresses in this queue via callback, and keys are
+        later pulled out and applied to the game state during the
+        game logic loop."}
+  *key-event-queue* (atom '()))
+
+(defn queue-keypress
+  "Atomically queue keypress in global queue for later handling.  This should
+   be called as the browser's key-handling callback."
   [event]
-  (let [player @*player*
-        key (.-keyCode event)]
+  (let [key (.-keyCode event)]
+    (swap! *key-event-queue* #(concat % [key]))))
+
+(defn handle-keypress
+  "Returns new game state updated to reflect the results of a player's
+   keypress.
+
+   ## Key map
+
+       * Right -- Move counter-clockwise
+       * Left -- Move clockwise
+       * Space -- Shoot
+       * Escape -- Pause
+  "
+  [game-state key]
+  (let [player (:player game-state)
+        projectile-list (:projectile-list game-state)
+        paused? (:paused? game-state)]
     (condp = key
-      key-codes/RIGHT (set-global-player-segment!
-                       (segment-player-right player))
-      key-codes/LEFT (set-global-player-segment!
-                      (segment-player-left player))
-      key-codes/SPACE (add-player-projectile! player)
-      key-codes/ESC (def *paused* (atom (not @*paused*)))
-      nil
+      key-codes/RIGHT (assoc game-state
+                        :player
+                        (assoc player :segment (segment-player-right player)))
+      key-codes/LEFT  (assoc game-state
+                        :player
+                        (assoc player :segment (segment-player-left player)))
+      key-codes/SPACE (assoc game-state
+                        :projectile-list
+                        (add-player-projectile projectile-list player))
+      key-codes/ESC (assoc game-state (not paused?))
+      game-state
       )))
+
+(defn dequeue-keypresses
+  "Atomically dequeue keypresses from global queue and pass to handle-keypress,
+   until global queue is empty.  Returns game state updated after applying
+   all keypresses.
+
+   Has a side effect of clearing global *key-event-queue*.
+
+   ### Implementation details:
+
+   Use compare-and-set! instead of swap! to test against the value we
+   entered the loop with, instead of the current value.  compare-and-set!
+   returns true only if the update was a success (i.e. the queue hasn't
+   changed since entering the loop), in which case we handle the key.
+   If the queue has changed, we do nothing.  The loop always gets called
+   again with the current deref of the global state.
+  "
+  [game-state]
+  (loop [state game-state
+         queue @*key-event-queue*]
+    (if (empty? queue)
+      state
+      (let [key (first queue)
+            valid? (compare-and-set! *key-event-queue* queue (rest queue))]
+        (if valid?
+          (recur (handle-keypress state key) @*key-event-queue*)
+          (recur state @*key-event-queue*))))))
+
 
 (defn animationFrameMethod []
   "Returns a callable javascript function to schedule a frame to be drawn.
@@ -334,49 +385,34 @@ the player's ship, enemies, and projectiles.
         :else (recur remaining)))
      options)))
 
-(def ^{:doc
-       "Stores the frame-scheduling function for the current browser.
-        This function should be called at the end of each frame to
-        schedule the next frame to be drawn at the appropriate time."}
-  *animMethod* (animationFrameMethod))
-
-
-
-(def *frame-count* (atom 0))
-(def *frame-time* (atom (goog.now)))
-(def *enemy-list* (atom (list)))
-(def *player* (atom (list)))
-(def *projectile-list* (atom (list)))
 
 (defn build-game-state
+  "Returns an empty game-state map."
   []
-  (atom
-   {:enemy-list '()
-    :projectile-list '()
-    :player '()
-    :context nil
-    :anim-fn identity
-    :dims {:width 0 :height 0}
-    :level nil
-    :frame-count 0
-    :frame-time 0
-    :paused? false
-    }))
-
-(defn game-loop
-  [initial-game-state]
-  (loop [game-state initial-game-state]
-    (recur (update-game game-state))))
+  {:enemy-list '()
+   :projectile-list '()
+   :player '()
+   :context nil
+   :anim-fn identity
+   :dims {:width 0 :height 0}
+   :level nil
+   :frame-count 0
+   :frame-time 0
+   :paused? false
+   })
 
 (defn clear-frame
+  "Returns game state unmodified, clears the HTML5 canvas as a side-effect."
   [game-state]
   (let [{context :context
          {width :width height :height} :dims}
         game-state]
-    (.clearRect context 0 0 (:width dims) (:height dims))
+    (.clearRect context 0 0 width height dims)
     game-state))
 
 (defn render-frame
+  "Draws the current game-state on the HTML5 canvas.  Returns the game state
+   unmodified (drawing is a side-effect)."
   [game-state]
   (let [{context :context
          dims :dims
@@ -385,13 +421,14 @@ the player's ship, enemies, and projectiles.
          projectile-list :projectile-list
          player :player}
         game-state]
-    (.clearRect context 0 0 (:width dims) (:height dims))
     (draw/draw-player context dims level player)
     (draw/draw-entities context dims level enemy-list)
     (draw/draw-entities context dims level projectile-list)
     game-state))
 
 (defn remove-collided-entities
+  "Detects and removes projectiles that have collided with enemies, and enemies
+   whose hit counts have dropped to zero.  Returns updated game-state."
   [game-state]
   (let [{enemy-list :enemy-list
          projectile-list :projectile-list}
@@ -403,35 +440,41 @@ the player's ship, enemies, and projectiles.
         :enemy-list elist))))
 
 (defn update-projectile-locations
+  "Returns game-state with all projectiles updated to have new positions
+   based on their speeds and current position."
   [game-state]
-  (let [{projectile-list :projectile-list} game-state]
+  (let [{projectile-list :projectile-list} game-state
+        rm-fn (partial remove projectile-off-level?)]
     (assoc game-state
       :projectile-list (-> projectile-list
                            update-entity-list
-                           (partial remove projectile-off-level?)))))
+                           rm-fn))))
 
 (defn update-enemy-locations
+  "Returns game-state with all of the enemies updated to have new positions
+   based on their speeds and current position."
   [game-state]
   (let [{enemy-list :enemy-list} game-state]
     (assoc game-state :enemy-list (update-entity-list enemy-list))))
 
 (defn schedule-next-frame
+  "Tells the player's browser to schedule the next frame to be drawn, using
+   whatever the best mechanism the browser has to do so."
   [game-state]
-  (let [{context :context
-         dims :dims
-         level :level
-         anim-fn :anim-fn}
-        game-state]
-    (anim-fn #(update-game! context dims level))))
+  ((:anim-fn game-state) #(next-game-state game-state)))
 
 (defn update-frame-count
+  "Increments the game-state's frame counter, which is a count of frames since
+   the last FPS measurement."
   [game-state]
-  (let [{frame-count :frame-count
-         frame-time :frame-time}
+  (let [{frame-count :frame-count}
         game-state]
     (assoc game-state :frame-count (inc frame-count))))
 
 (defn render-fps-display
+  "Print a string representation of the most recent FPS measurement in
+   an HTML element named 'fps'.  This resets the frame-count and frame-time
+   currently stored in the game state."
   [game-state]
   (let [{frame-count :frame-count
          frame-time :frame-time}
@@ -444,14 +487,19 @@ the player's ship, enemies, and projectiles.
       :frame-time (goog.now))))
 
 (defn maybe-render-fps-display
+  "Calls render-fps-display if the frame-count is above a certain threshhold."
   [game-state]
   (if (= (:frame-count game-state) 20)
     (render-fps-display game-state)
     game-state))
 
 (defn next-game-state
+  "Given the current game-state, threads it through a series of functions that
+   calculate the next game-state.  This is the most fundamental call in the
+   game; it applies all of the logic."
   [game-state]
   (->> game-state
+       dequeue-keypresses
        clear-frame
        render-frame
        remove-collided-entities
@@ -461,38 +509,5 @@ the player's ship, enemies, and projectiles.
        maybe-render-fps-display
        schedule-next-frame
        ))
-
-(defn update-game!
-  "Call all of the drawing functions to redraw the scene, and update all
-   of the entities on the level."
-  [context dims level]
-  (doseq []
-    (.clearRect context 0 0 (:width dims) (:height dims))
-    
-    (draw/draw-player context dims level (deref *player*))
-    (draw/draw-entities context dims level @*enemy-list*)
-    (draw/draw-entities context dims level @*projectile-list*)
-    
-    (when (not @*paused*)
-      (let [new-entities (entities-after-collisions @*enemy-list*
-                                                      @*projectile-list*)]
-        (def *projectile-list* (atom (:projectiles new-entities)))
-        (def *enemy-list* (atom (:entities new-entities))))
-        
-      (def *projectile-list* (atom (update-entity-list @*projectile-list*)))
-      (def *projectile-list* (atom (remove projectile-off-level?
-                                           @*projectile-list*)))
-      (def *enemy-list* (atom (update-entity-list @*enemy-list*)))
-      (*animMethod* #(update-game! context dims level)))
-    
-    (def *frame-count* (atom (inc @*frame-count*)))
-    (when (= 20 @*frame-count*)
-      (let [fps (/ (* 1000 @*frame-count*)
-                   (- (goog.now) @*frame-time*))]
-        (dom/setTextContent (dom/getElement "fps")
-                            (str "FPS: " (pr-str (js/Math.round fps)))))
-      
-      (def *frame-count* (atom 0))
-      (def *frame-time* (atom (goog.now))))))
 
 
