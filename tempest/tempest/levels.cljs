@@ -243,6 +243,8 @@ Functions related to generating paths representing levels.
 (def *level6_lines* (vec (oblong-level [135 45 90 135 45 90 135 45 90 135 45 90
                                         135 45 90 135 45 90 135 45 90 135 45] 15 80)))
 
+(def *level7_lines* (vec (oblong-level [135 45 135 45] 15 3)))
+
 
 
 (defn make-level-entry 
@@ -263,6 +265,7 @@ Functions related to generating paths representing levels.
     (make-level-entry *level3_lines* false)
     (make-level-entry *level4_lines* false)
     (make-level-entry *level5_lines* false)
-    (make-level-entry *level6_lines* true)])
+    (make-level-entry *level6_lines* true)
+    (make-level-entry *level7_lines* false)])
 
 

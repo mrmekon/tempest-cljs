@@ -46,6 +46,7 @@ after passing through all the other functions.  This implements the game loop.
        remove-collided-entities
        update-projectile-locations
        update-enemy-locations
+       update-enemy-flippyness
        update-frame-count
        maybe-render-fps-display
        schedule-next-frame
@@ -65,6 +66,12 @@ after passing through all the other functions.  This implements the game loop.
    :path-fn path/projectile-path-on-level
    })
 
+(def DirectionEnum {"NONE" 0 "CW" 1 "CCW" 2})
+
+(defn direction-string-from-value
+  [val]
+  (first (first (filter #(= 1 (peek %)) (into [] maptest)))))
+
 (defn build-enemy
   "Returns a dictionary describing an enemy on the given level and segment,
    and starting on the given step.  Step defaults to 0 (innermost step of
@@ -73,11 +80,87 @@ after passing through all the other functions.  This implements the game loop.
   {:step step
    :stride 1
    :segment seg-idx
-   :path-fn path/flipper-path-on-level
    :level level
    :hits-remaining 1
-   :bounding-fn path/flipper-path-bounding-box
+   :path-fn #([])
+   :bounding-fn #(identity 0)
+
+    :flip-dir (DirectionEnum "NONE")
+    :flip-point [0 0]
+    :flip-stride 1
+    :flip-max-angle 0
+    :flip-cur-angle 0
    })
+
+(defn build-flipper
+  [level seg-idx & {:keys [step] :or {step 0}}]
+  (assoc (build-enemy level seg-idx :step step)
+    :bounding-fn path/flipper-path-bounding-box
+    :path-fn path/flipper-path-on-level
+    :flip-dir (DirectionEnum "NONE")
+    :flip-point [0 0]
+    :flip-stride 1
+    :flip-max-angle 0
+    :flip-cur-angle 0
+    ))
+
+(defn mark-flipper-for-flipping
+  [flipper direction stride seg-idx cw?]
+  (assoc flipper
+    :stride 0
+    :flip-dir (DirectionEnum direction)
+    :flip-stride stride
+    :flip-cur-angle 0
+    :flip-point (path/flip-point-between-segments
+                 (:level flipper)
+                 (:segment flipper)
+                 seg-idx
+                 (:step flipper)
+                 cw?)
+    :flip-max-angle (path/flip-angle-between-segments
+                     (:level flipper)
+                     (:segment flipper)
+                     seg-idx
+                     cw?)))
+
+(defn random-direction-string
+  []
+  (condp = (rand-int 2)
+        0 "CW"
+        "CCW"))
+
+(defn segment-for-flip-direction
+  [flipper flip-dir]
+  (condp = flip-dir
+        "CW" (segment-entity-cw flipper)
+        (segment-entity-ccw flipper)))
+
+(defn maybe-engage-flipping
+  [flipper]
+  (let [should-flip (and (= (:step flipper) 100) (= (:flip-dir flipper) (DirectionEnum "NONE")))
+        flip-dir (random-direction-string)
+        flip-seg-idx (segment-for-flip-direction flipper flip-dir)
+        cw? (= flip-dir "CW")]
+    (if (and should-flip
+             (not= flip-seg-idx (:segment flipper)))             
+      (mark-flipper-for-flipping flipper flip-dir 1 flip-seg-idx cw?)
+      flipper)))
+
+(defn consider-flipping
+  [entity-list]
+  ((fn [oldlist newlist]
+     (let [entity (first oldlist)]
+       (if (empty? entity)
+         newlist
+         (recur (rest oldlist)
+                (cons (maybe-engage-flipping entity) newlist))))
+         ) entity-list []))
+
+(defn update-enemy-flippyness
+  [game-state]
+  (let [{enemy-list :enemy-list} game-state]
+    (assoc game-state :enemy-list (consider-flipping enemy-list))))
+
 
 (defn build-player
   "Returns a dictionary describing a player on the given level and segment."
@@ -291,7 +374,7 @@ after passing through all the other functions.  This implements the game loop.
     (conj projectile-list
           (build-projectile level seg-idx stride :step step))))
 
-(defn segment-player-left
+(defn segment-entity-cw
   "Returns the segment to the left of the player.  Loops around the level
    on connected levels, and stops at 0 on unconnected levels."
   [player]
@@ -305,7 +388,7 @@ after passing through all the other functions.  This implements the game loop.
       new-seg)))
 
 
-(defn segment-player-right
+(defn segment-entity-ccw
   "Returns the segment to the right of the player.  Loops around the level
    on connected levels, and stops at max on unconnected levels."
   [player]
@@ -344,10 +427,10 @@ after passing through all the other functions.  This implements the game loop.
     (condp = key
       key-codes/RIGHT (assoc game-state
                         :player
-                        (assoc player :segment (segment-player-right player)))
+                        (assoc player :segment (segment-entity-ccw player)))
       key-codes/LEFT  (assoc game-state
                         :player
-                        (assoc player :segment (segment-player-left player)))
+                        (assoc player :segment (segment-entity-cw player)))
       key-codes/SPACE (assoc game-state
                         :projectile-list
                         (add-player-projectile projectile-list player))

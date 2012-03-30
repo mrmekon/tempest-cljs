@@ -29,7 +29,39 @@ level functions to draw complete game entities using the primitives.
   (.moveTo context (first point0) (peek point0))
   (.lineTo context (first point1) (peek point1))
   (.stroke context))
-  
+
+(defn max-flipper-angle
+  []
+  ;; get (x0,y0) and (x1,y1) of corners of current segment
+  ;; gamma = atan2(y1-y0,x1-x0)
+  ;; theta = PI-gamma
+  )
+
+(defn draw-path-rotated
+  [context origin vecs skipfirst? point angle]
+  ;; determine x/y translate and origin offsets by difference between
+  ;; cartesian midpoint of segment and cartesian corner of segment.
+  ;;
+  ;; angle starts at 0, and ends at some angle difference between 
+  (do
+    (.save context)
+    (.translate context
+                (- (first origin) (first point))
+                (- (peek origin) (peek point)))
+    (.rotate context angle)
+    ((fn [origin vecs skip?]
+       (if (empty? vecs)
+         nil
+         (let [line (first vecs)
+               point (path/rebase-origin (path/polar-to-cartesian-coords line)
+                                         origin)]
+           (.lineTo context (first point) (peek point))
+           (recur point (next vecs) false))))
+     [(first point) (peek point)] vecs skipfirst?)
+     ;;[0 0] vecs skipfirst?)
+    (.stroke context)
+    (.restore context)
+    ))
 
 (defn draw-path
   "Draws a 'path', a vector of multiple polar coordinates, on an HTML5 2D
@@ -83,12 +115,17 @@ level functions to draw complete game entities using the primitives.
   [context dims level entity-list]
   (doseq [entity entity-list]
     (.beginPath context)
-    (draw-path context
+    (draw-path-rotated context
                (path/polar-to-cartesian-centered
                 (path/polar-entity-coord entity)
                 dims)
                (path/round-path ((:path-fn entity) entity))
-               true)
+               true
+               (:flip-point entity)
+               ;;[20 -20]
+               (:flip-max-angle entity)
+               ;;0
+               )
     (.closePath context)))
 
 (defn draw-board

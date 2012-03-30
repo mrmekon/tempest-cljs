@@ -19,6 +19,76 @@ and 'paths' consisting of a sequence of coordinates.
   [(+ (first point1) (first point0))
    (- (peek point1) (peek point0))])
 
+(defn cartesian-edge-coordinates
+  "Returns a pair of cartesian coordinates [[x0 y0] [x1 y1]], representing
+   the points on the edges of the given segment of the given level at the
+   given step.
+
+   That is, this returns the two points at the edge of a segment between which
+   an entity would be drawn."
+  [level seg-idx step]
+  (let [edges (polar-lines-for-segment level seg-idx false)
+        edge-steps (step-lengths-for-segment-lines level seg-idx)
+        offset0 (* (first edge-steps) step)
+        offset1 (* (peek edge-steps) step)
+        point0 (polar-extend offset0 (first edges))
+        point1 (polar-extend offset1 (peek edges))]
+    [(polar-to-cartesian-coords point0)
+     (polar-to-cartesian-coords point1)]))
+
+(defn cartesian-point-between-segments
+  [level seg-idx0 seg-idx1 step]
+  (let [line (edge-line-between-segments level seg-idx0 seg-idx1)
+        line-steps (step-length-for-level-line level line)        
+        offset (* line-steps step)
+        point0 (polar-extend offset line)]
+    (polar-to-cartesian-coords point0)))
+
+
+(defn edge-line-between-segments
+  [level seg-idx0 seg-idx1]
+  (let [segs0 (get (:segments level) seg-idx0)
+        segs1 (get (:segments level) seg-idx1)
+        allsegs (flatten [segs0 segs1])]
+    (first (for [[id freq] (frequencies allsegs) :when (> freq 1)]
+             (get (:lines level) id)))))
+
+(defn flip-angle-between-segments
+  "Returns the angle, in radians, between the two given segments on the
+given level."
+  [level seg-idx-cur seg-idx-new cw?]
+  (let [angle-cur (segment-angle level seg-idx-cur)
+        angle-new (segment-angle level seg-idx-new)]
+      (- 0 (- (+ angle-new 3.14159265) angle-cur))
+  ))
+
+(defn flip-point-between-segments
+  [level seg-idx-cur seg-idx-new step cw?]
+  (let [[x0 y0] (cartesian-point-between-segments level
+                                                  seg-idx-cur
+                                                  seg-idx-new
+                                                  step)
+        [x1 y1] (polar-to-cartesian-coords
+                 (polar-segment-midpoint level seg-idx-cur step))
+        edge-points (cartesian-edge-coordinates level seg-idx-new step)]
+    (.log js/console (pr-str "Edge points: " edge-points
+                             "\nPivot point: " [x0 y0]))
+    (.log js/console (pr-str "Result: " [(- x0 x1) (- y0 y1)]))
+    [(- x1 x0) (- y0 y1)]))
+
+(comment
+(defn flip-point-between-segments
+  [level seg-idx-cur seg-idx-new step cw?]
+  (let [[x0 y0] (polar-to-cartesian-coords
+                 (polar-segment-midpoint level seg-idx-cur step))
+        [[x1 y1] [x2 y2]] (cartesian-edge-coordinates level seg-idx-new step)]
+    (.log js/console (str "CW? " (pr-str cw?) " "
+                          (pr-str [(- x0 x2) (- y2 y0)]
+                                  [(- x1 x0) (- y0 y1)])))
+    (if cw?
+      [(- x0 x2) (- y2 y0)]
+      [(- x1 x0) (- y0 y1)])))
+)
 
 (defn rebase-origin
   "Return cartesian coordinate 'point' in relation to 'origin'."
@@ -94,8 +164,24 @@ and 'paths' consisting of a sequence of coordinates.
      (polar-to-cartesian-coords line1)]
     ))
 
+(defn polar-segment-midpoint
+  "Returns current polar coordinates to the entity."
+  [level seg-idx step]
+  (let [steplen (step-length-segment-midpoint level seg-idx)
+        offset (* steplen step)
+        midpoint (segment-midpoint level seg-idx)]
+    (polar-extend offset midpoint)))
 
 (defn polar-entity-coord
+  "Returns current polar coordinates to the entity."
+  [entity]
+  (polar-segment-midpoint (:level entity)
+                          (:segment entity)
+                          (:step entity)))
+
+
+(comment
+  (defn polar-entity-coord
   "Returns current polar coordinates to the entity."
   [entity]
   (let [steplen (step-length-segment-midpoint (:level entity)
@@ -103,6 +189,7 @@ and 'paths' consisting of a sequence of coordinates.
         offset (* steplen (:step entity))
         midpoint (segment-midpoint (:level entity) (:segment entity))]
     (polar-extend offset midpoint)))
+  )
 
 (defn step-length-segment-midpoint
   "Finds the 'step length' of a line through the middle of a level's segment.
@@ -133,6 +220,11 @@ and 'paths' consisting of a sequence of coordinates.
      (first point0)
      (first point1))
     (:steps level))))
+
+(defn step-length-for-level-line
+  [level line]
+  (let [longline (scale-polar-coord (:length-fn level) line)]
+    (step-length-line level line longline)))
 
 (defn step-lengths-for-segment-lines
   "Returns a vector [len0 len1] with the 'step length' for the two edge
@@ -334,27 +426,24 @@ and 'paths' consisting of a sequence of coordinates.
   [length path]
   (map #(polar-extend length %) path))
 
+(defn segment-angle
+  "Returns the angle (in radians) of the given segment.
+   The angle of a segment is the angle of any line projected onto it."
+  [level seg-idx]
+  (let [[point0 point1] (polar-lines-for-segment level seg-idx false)]
+    (apply js/Math.atan2
+           (vec (reverse (map - (polar-to-cartesian-coords point0)
+                              (polar-to-cartesian-coords point1)))))))
+
 (defn enemy-angle
-  "Returns the angle from origin that the enemy needs to be rotated to
-   appear in the correct orientation at its current spot on the level.
-   In reality, it returns the angle of the line that traverses the segment
-   across the midpoint of the enemy.  TODO: This should be renamed to
+  "Returns the angle (in degrees) from origin that the enemy needs to be
+   rotated to appear in the correct orientation at its current spot on the
+   level. In reality, it returns the angle of the line that traverses the
+   segment across the midpoint of the enemy.  TODO: This should be renamed to
    'entity-angle', it works with anything on the board."
   [enemy]
-  (let [edges (polar-lines-for-segment (:level enemy)
-                                       (:segment enemy)
-                                       false)
-        edge-steps (step-lengths-for-segment-lines (:level enemy)
-                                                   (:segment enemy))
-        offset0 (* (first edge-steps) (:step enemy))
-        offset1 (* (peek edge-steps) (:step enemy))
-        point0 (polar-extend offset0 (first edges))
-        point1 (polar-extend offset1 (peek edges))]
-    (util/rad-to-deg
-     (apply js/Math.atan2
-            (vec (reverse (map - (polar-to-cartesian-coords point0)
-                      (polar-to-cartesian-coords point1))))))))
-  
+  (util/rad-to-deg (segment-angle (:level enemy) (:segment enemy))))
+
 (defn entity-desired-width
   "Returns how wide the given enemy should be drawn to span the full width
    of its current location.  In reality, that means returning the length of
