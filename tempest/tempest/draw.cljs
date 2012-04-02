@@ -123,7 +123,7 @@ level functions to draw complete game entities using the primitives.
                true
                (:flip-point entity)
                ;;[20 -20]
-               (:flip-max-angle entity)
+               (:flip-cur-angle entity)
                ;;0
                )
     (.closePath context)))

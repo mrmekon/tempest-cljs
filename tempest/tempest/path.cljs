@@ -59,7 +59,7 @@ given level."
   [level seg-idx-cur seg-idx-new cw?]
   (let [angle-cur (segment-angle level seg-idx-cur)
         angle-new (segment-angle level seg-idx-new)]
-      (- 0 (- (+ angle-new 3.14159265) angle-cur))
+      (mod (- 0 (- (+ angle-new 3.14159265) angle-cur)) 6.2831853)
   ))
 
 (defn flip-point-between-segments
@@ -71,9 +71,6 @@ given level."
         [x1 y1] (polar-to-cartesian-coords
                  (polar-segment-midpoint level seg-idx-cur step))
         edge-points (cartesian-edge-coordinates level seg-idx-new step)]
-    (.log js/console (pr-str "Edge points: " edge-points
-                             "\nPivot point: " [x0 y0]))
-    (.log js/console (pr-str "Result: " [(- x0 x1) (- y0 y1)]))
     [(- x1 x0) (- y0 y1)]))
 
 (comment

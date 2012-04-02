@@ -46,7 +46,8 @@ after passing through all the other functions.  This implements the game loop.
        remove-collided-entities
        update-projectile-locations
        update-enemy-locations
-       update-enemy-flippyness
+       update-entity-is-flipping
+       update-entity-flippyness
        update-frame-count
        maybe-render-fps-display
        schedule-next-frame
@@ -102,26 +103,76 @@ after passing through all the other functions.  This implements the game loop.
     :flip-stride 1
     :flip-max-angle 0
     :flip-cur-angle 0
+    :flip-permanent-dir nil
     ))
 
+;; TODO: CW usually right, not always
+;; CCW rotation goes through level
+;; adding 360 deg to angle fixes it... but when??
+
+(defn flip-angle-stride
+  "Returns the angle stride of a flipper, which is how many radians to
+increment his current flip angle by to be completely flipped onto his
+destination segment (angle of max-angle) on 'steps' number of increments,
+going clockwise if cw? is true, or counter-clockwise otherwise.
+
+### Implementation details:
+
+There are three known possibilities for determining the stride such that the
+flipper appears to flip 'inside' the level:
+
+ * max-angle/steps -- If flipper is going clockwise and max-angle is less
+   than zero, or if flipper is going counter-clockwise and max-angle is
+   greater than zero.
+ * (max-angle - 2PI)/steps -- If flipper is going clockwise and max-angle
+   is greater than zero.
+ * (max-angle + 2PI)/steps -- If flipper is going counter-clockwise and
+   max-angle is less than zero.
+"
+  [max-angle steps cw?]
+  (let [dir0 (/ max-angle steps)
+        dir1 (/ (- max-angle 6.2831853) steps)
+        dir2 (/ (+ max-angle 6.2831853) steps)]
+  (cond
+   (<= max-angle 0) (if cw? dir0 dir2)
+   :else (if cw? dir1 dir0))))
+
 (defn mark-flipper-for-flipping
-  [flipper direction stride seg-idx cw?]
+  [flipper direction seg-idx cw?]
+  (let [point (path/flip-point-between-segments
+               (:level flipper)
+               (:segment flipper)
+               seg-idx
+               (:step flipper)
+               cw?)
+        max-angle (path/flip-angle-between-segments
+                   (:level flipper)
+                   (:segment flipper)
+                   seg-idx
+                   cw?)
+        step-count 10
+        stride (flip-angle-stride max-angle step-count cw?)
+        permanent (if (= (:steps (:level flipper))
+                         (:step flipper)) direction nil)]
+    (assoc flipper
+      :stride 0
+      :old-stride (:stride flipper)
+      :flip-dir (DirectionEnum direction)
+      :flip-cur-angle 0
+      :flip-to-segment seg-idx
+      :flip-point point
+      :flip-max-angle max-angle
+      :flip-stride stride
+      :flip-steps-remaining step-count
+      :flip-permanent-dir permanent)))
+
+(defn update-entity-stop-flipping
+  [flipper]
   (assoc flipper
-    :stride 0
-    :flip-dir (DirectionEnum direction)
-    :flip-stride stride
+    :stride (:old-stride flipper)
+    :flip-dir (DirectionEnum "NONE")
     :flip-cur-angle 0
-    :flip-point (path/flip-point-between-segments
-                 (:level flipper)
-                 (:segment flipper)
-                 seg-idx
-                 (:step flipper)
-                 cw?)
-    :flip-max-angle (path/flip-angle-between-segments
-                     (:level flipper)
-                     (:segment flipper)
-                     seg-idx
-                     cw?)))
+    :segment (:flip-to-segment flipper)))
 
 (defn random-direction-string
   []
@@ -137,13 +188,19 @@ after passing through all the other functions.  This implements the game loop.
 
 (defn maybe-engage-flipping
   [flipper]
-  (let [should-flip (and (= (:step flipper) 100) (= (:flip-dir flipper) (DirectionEnum "NONE")))
-        flip-dir (random-direction-string)
+  (let [should-flip (and (or
+                          (= (:step flipper) 50)
+                          (= (:step flipper) 100)
+                          (= (:step flipper) 150)
+                          (= (:step flipper) 200)
+                          )
+                         (= (:flip-dir flipper) (DirectionEnum "NONE")))
+        flip-dir (or (:flip-permanent-dir flipper) (random-direction-string))
         flip-seg-idx (segment-for-flip-direction flipper flip-dir)
         cw? (= flip-dir "CW")]
     (if (and should-flip
              (not= flip-seg-idx (:segment flipper)))             
-      (mark-flipper-for-flipping flipper flip-dir 1 flip-seg-idx cw?)
+      (mark-flipper-for-flipping flipper flip-dir flip-seg-idx cw?)
       flipper)))
 
 (defn consider-flipping
@@ -156,10 +213,27 @@ after passing through all the other functions.  This implements the game loop.
                 (cons (maybe-engage-flipping entity) newlist))))
          ) entity-list []))
 
-(defn update-enemy-flippyness
+(defn update-entity-is-flipping
   [game-state]
   (let [{enemy-list :enemy-list} game-state]
     (assoc game-state :enemy-list (consider-flipping enemy-list))))
+
+(defn update-entity-flippyness
+  [game-state]
+  (let [{enemy-list :enemy-list} game-state]
+    (assoc game-state :enemy-list (map update-flip-angle enemy-list))))
+
+(defn update-flip-angle
+  [flipper]
+  (let [new-angle (+ (:flip-stride flipper) (:flip-cur-angle flipper))
+        remaining (dec (:flip-steps-remaining flipper))]
+    (if (not= (:flip-dir flipper) (DirectionEnum "NONE"))
+      (if (< remaining 0)
+        (update-entity-stop-flipping flipper)
+        (assoc flipper
+          :flip-cur-angle new-angle
+          :flip-steps-remaining remaining))
+      flipper)))
 
 
 (defn build-player
