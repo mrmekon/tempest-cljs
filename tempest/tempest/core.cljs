@@ -481,7 +481,9 @@ flipper appears to flip 'inside' the level:
    be called as the browser's key-handling callback."
   [event]
   (let [key (.-keyCode event)]
-    (swap! *key-event-queue* #(concat % [key]))))
+    (swap! *key-event-queue* #(concat % [key]))
+    (.preventDefault event)
+    (.stopPropagation event)))
 
 (defn handle-keypress
   "Returns new game state updated to reflect the results of a player's

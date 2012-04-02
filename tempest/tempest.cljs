@@ -73,7 +73,7 @@ Publicly exported functions to embed Tempest game in HTML.
         context (.getContext canvas "2d")
         bgcanvas (dom/getElement "canv-bg")
         bgcontext (.getContext bgcanvas "2d")
-        handler (goog.events.KeyHandler. document)
+        handler (goog.events.KeyHandler. document true)
         dims {:width (.-width canvas) :height (.-height canvas)}]
 
     (draw/draw-board bgcontext dims level)
