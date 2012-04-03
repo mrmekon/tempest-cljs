@@ -63,6 +63,12 @@ Publicly exported functions to embed Tempest game in HTML.
 ;;   * Frame timing, and disassociate movement speed from framerate.
 ;;
 
+(defn enemy-on-each-segment
+  "List of enemies, one per segment."
+  [level]
+  (map #(c/build-flipper level % :step 0)
+       (range (count (:segments level)))))
+
 (defn ^:export canvasDraw
   "Begins a game of tempest.  'level' specified as a string representation
    of an integer."
@@ -78,6 +84,8 @@ Publicly exported functions to embed Tempest game in HTML.
 
     (draw/draw-board bgcontext dims level)
     (events/listen handler "key" (fn [e] (c/queue-keypress e)))
+
+    (.log js/console (pr-str (enemy-on-each-segment level)))
     
     (let [empty-game-state (c/build-game-state)
           game-state (assoc empty-game-state
@@ -86,57 +94,7 @@ Publicly exported functions to embed Tempest game in HTML.
                        :context context
                        :dims dims
                        :anim-fn (c/animationFrameMethod)
-                       :enemy-list (list
-                                    (c/build-flipper level 0 :step 0)
-                                    (c/build-flipper level 1 :step 0)
-                                    (c/build-flipper level 2 :step 0)
-                                    (c/build-flipper level 3 :step 0)
-                                    (c/build-flipper level 4 :step 0)
-                                    (c/build-flipper level 5 :step 0)
-                                    (c/build-flipper level 6 :step 0)
-                                    (c/build-flipper level 7 :step 0)
-                                    (c/build-flipper level 8 :step 0)
-                                    (c/build-flipper level 9 :step 0)
-                                    (c/build-flipper level 10 :step 0)
-                                    (c/build-flipper level 11 :step 0)
-                                    (c/build-flipper level 12 :step 0)
-                                    (c/build-flipper level 13 :step 0)
-                                    (c/build-flipper level 14 :step 0)
-                                    (c/build-flipper level 15 :step 0)
-                                    (c/build-flipper level 16 :step 0)
-                                    (c/build-flipper level 17 :step 0)
-                                    (c/build-flipper level 18 :step 0)
-                                    (c/build-flipper level 19 :step 0)
-                                    (c/build-flipper level 20 :step 0)
-                                    (c/build-flipper level 21 :step 0)
-                                    (c/build-flipper level 22 :step 0)
-                                    (c/build-flipper level 23 :step 0)
-                                    (c/build-flipper level 24 :step 0)
-                                    (c/build-flipper level 25 :step 0)
-                                    (c/build-flipper level 26 :step 0)
-                                    (c/build-flipper level 27 :step 0)
-                                    (c/build-flipper level 28 :step 0)
-                                    (c/build-flipper level 29 :step 0)
-                                    (c/build-flipper level 30 :step 0)
-                                    (c/build-flipper level 31 :step 0)
-                                    (c/build-flipper level 32 :step 0)
-                                    (c/build-flipper level 33 :step 0)
-                                    (c/build-flipper level 34 :step 0)
-                                    (c/build-flipper level 35 :step 0)
-                                    (c/build-flipper level 36 :step 0)
-                                    (c/build-flipper level 37 :step 0)
-                                    (c/build-flipper level 38 :step 0)
-                                    (c/build-flipper level 39 :step 0)
-                                    (c/build-flipper level 40 :step 0)
-                                    (c/build-flipper level 41 :step 0)
-                                    (c/build-flipper level 42 :step 0)
-                                    (c/build-flipper level 43 :step 0)
-                                    (c/build-flipper level 44 :step 0)
-                                    (c/build-flipper level 45 :step 0)
-                                    (c/build-flipper level 46 :step 0)
-                                    ))]
+                       :enemy-list (enemy-on-each-segment level))]
       (c/next-game-state game-state))))
 
 
-(comment
-)

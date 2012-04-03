@@ -101,7 +101,7 @@ after passing through all the other functions.  This implements the game loop.
     :flip-dir (DirectionEnum "NONE")
     :flip-point [0 0]
     :flip-stride 1
-    :flip-step-count 100
+    :flip-step-count 20
     :flip-max-angle 0
     :flip-cur-angle 0
     :flip-permanent-dir nil
