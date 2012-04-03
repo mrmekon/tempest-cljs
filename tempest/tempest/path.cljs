@@ -310,15 +310,15 @@ given level."
 ;; Path that defines player.
 (def ^{:doc "Path, in polar coordinates, describing the player's ship."}
   *player-path*
-  [[40 90]
-   [44 196]
-   [27 333]
-   [17 135]
-   [30 11]
-   [30 349]
-   [17 225]
-   [27 27]
-   [44 164]])
+  [[24 90]
+   [26 196]
+   [16 333]
+   [10 135]
+   [18 11]
+   [18 349]
+   [10 225]
+   [16 27]
+   [26 164]])
 
 (defn bounding-box-from-radius
   [origin radius]
@@ -332,10 +332,12 @@ given level."
   "Returns the path of polar coordinates to draw the player correctly at its
    current location.  It corrects for size and angle."
   [player]
-  (let [coord (polar-entity-coord player)]
-    (scale-path 0.6 (rotate-path
-     (enemy-angle player)
-     *player-path*))))
+  ;;(rotate-path (enemy-angle player) (:path player)))
+  (rotate-path (enemy-angle player)
+               (player-path-with-width
+                 (* 0.75 (entity-desired-width player))
+                 (= (:step player) (:steps (:level player))))))
+
 
 (defn flipper-path-bounding-circle-radius
   "Returns the radius of the bounding circle around the given flipper's path."
@@ -373,6 +375,21 @@ given level."
      [(/ r 4) 214]
      [(/ r 2) 16]]))
 
+
+(defn player-path-with-width
+  "Returns a path to draw a projectile with the given width."
+  [width offset?]
+  (let [r (/ (/ width 2) (js/Math.cos (util/deg-to-rad 16)))
+        offset (if offset? r 0)]
+  [[offset 90]
+   [r 196]
+   [(* 0.62 r) 333]
+   [(* 0.38 r) 135]
+   [(* 0.69 r) 11]
+   [(* 0.69 r) 349]
+   [(* 0.38 r) 225]
+   [(* 0.62 r) 27]
+   [r 164]]))
 
 (defn projectile-path-with-width
   "Returns a path to draw a projectile with the given width."

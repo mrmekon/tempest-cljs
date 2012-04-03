@@ -100,10 +100,9 @@ level functions to draw complete game entities using the primitives.
   (doseq []
     (.beginPath context)
     (draw-path context
-               (vec (map js/Math.round
-                         (path/polar-to-cartesian-centered
-                          (path/polar-entity-coord player)
-                          dims)))
+               (path/polar-to-cartesian-centered
+                (path/polar-entity-coord player)
+                dims)
                (path/round-path (path/player-path-on-level player))
                true)
     (.closePath context)))

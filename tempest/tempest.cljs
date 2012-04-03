@@ -85,8 +85,6 @@ Publicly exported functions to embed Tempest game in HTML.
     (draw/draw-board bgcontext dims level)
     (events/listen handler "key" (fn [e] (c/queue-keypress e)))
 
-    (.log js/console (pr-str (enemy-on-each-segment level)))
-    
     (let [empty-game-state (c/build-game-state)
           game-state (assoc empty-game-state
                        :player (c/build-player level 7)

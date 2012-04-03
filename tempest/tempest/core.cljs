@@ -46,8 +46,10 @@ after passing through all the other functions.  This implements the game loop.
        remove-collided-entities
        update-projectile-locations
        update-enemy-locations
+       check-if-player-captured
        update-entity-is-flipping
        update-entity-flippyness
+       animate-player-capture
        update-frame-count
        maybe-render-fps-display
        schedule-next-frame
@@ -93,6 +95,7 @@ after passing through all the other functions.  This implements the game loop.
    :flip-stride 1
    :flip-max-angle 0
    :flip-cur-angle 0
+   :can-flip false
    })
 
 (defn build-flipper
@@ -108,6 +111,7 @@ after passing through all the other functions.  This implements the game loop.
     :flip-max-angle 0
     :flip-cur-angle 0
     :flip-permanent-dir nil
+    :can-flip true
     ))
 
 (defn flip-angle-stride
@@ -171,7 +175,7 @@ flipper appears to flip 'inside' the level:
 
 (defn update-entity-stop-flipping
   "Updates an entity and marks it as not currently flipping."
-  [flipper]
+  [flipper]  
   (assoc flipper
     :stride (:old-stride flipper)
     :flip-dir (DirectionEnum "NONE")
@@ -212,13 +216,15 @@ flipper appears to flip 'inside' the level:
    is on the outermost edge of the level, and will randomly be true if it
    has not reached the edge."
   [flipper]
-  (let [should-flip (and (or
-                          (= (:step flipper) 50)
-                          (= (:step flipper) 100)
-                          (= (:step flipper) 150)
-                          (= (:step flipper) 200)
-                          )
-                         (= (:flip-dir flipper) (DirectionEnum "NONE")))
+  (let [should-flip (and
+                     (true? (:can-flip flipper))
+                     (or
+                      (= (:step flipper) 50)
+                      (= (:step flipper) 100)
+                      (= (:step flipper) 150)
+                      (= (:step flipper) 200)
+                      )
+                     (= (:flip-dir flipper) (DirectionEnum "NONE")))
         permanent-dir (:flip-permanent-dir flipper)
         flip-dir (or permanent-dir (random-direction))
         flip-seg-idx (segment-for-flip-direction flipper flip-dir)
@@ -230,6 +236,52 @@ flipper appears to flip 'inside' the level:
                                              flip-seg-idx cw?)
      (not (nil? permanent-dir)) (swap-flipper-permanent-dir flipper)
      :else flipper)))
+
+(defn mark-player-captured
+  [player]
+  (assoc player
+    :captured true
+    :stride -4))
+
+(defn mark-enemy-capturing
+  [enemy]
+  (assoc enemy
+    :capturing true
+    :can-flip false
+    :stride -4))
+
+(defn enemy-is-on-player?
+  "Returns true if given enemy and player are on top of each other."
+  [player enemy]
+  (and (= (:segment player) (:segment enemy))
+       (= (:step player) (:step enemy))
+       (= (DirectionEnum "NONE") (:flip-dir enemy))))
+
+(defn player-and-enemies-if-captured
+  "Given player and current list of enemies, returns an updated player
+   and updated enemy list if an enemy is capturing the player in vector
+   [player enemy-list].  Returns nil if no capture occurred."
+  [player enemy-list]
+  (let [{colliders true missers false}
+        (group-by (partial enemy-is-on-player? player) enemy-list)]
+    (when-let [[enemy & rest] colliders]
+      [(mark-player-captured player)
+       (cons (mark-enemy-capturing enemy) (concat missers rest))])))
+
+(defn check-if-player-captured
+  "If player is not already captured, checks all enemies to see if they
+   are now capturing the player.  See player-and-enemies-if-captured.
+   If capture is in progress, returns game-state with player and enemy-list
+   updated."
+  [game-state]
+  (if (:captured (:player game-state))
+    game-state
+    (if-let [[player enemy-list] (player-and-enemies-if-captured
+                                  (:player game-state)
+                                  (:enemy-list game-state))]
+      (assoc game-state :enemy-list enemy-list :player player)
+      game-state)))
+
 
 (defn update-entity-is-flipping
   "Decide if an enemy should start flipping for every enemy on the level."
@@ -270,8 +322,11 @@ flipper appears to flip 'inside' the level:
   [level seg-idx]
   {:segment seg-idx
    :level level
+   :captured false
    :step (:steps level)
-   :bullet-stride -5})
+   :bullet-stride -5
+   :stride 0
+   :path path/*player-path*})
 
 (defn entity-next-step
   "Returns the next step position of given entity, taking into account
@@ -432,6 +487,14 @@ flipper appears to flip 'inside' the level:
     ))
 
 
+(defn animate-player-capture
+  [global-state]
+  (if (:captured (:player global-state))
+    (assoc global-state
+      :player (update-entity-position! (:player global-state)))
+    global-state))
+
+
 
 (defn collisions-with-projectile
   "Returns map with keys true and false.  Values under true key have or
@@ -466,7 +529,7 @@ flipper appears to flip 'inside' the level:
   (let [level (:level player)
         seg-idx (:segment player)
         stride (:bullet-stride player)
-        step (:steps level)]
+        step (:step player)]
     (conj projectile-list
           (build-projectile level seg-idx stride :step step))))
 
@@ -529,6 +592,12 @@ flipper appears to flip 'inside' the level:
       key-codes/LEFT  (assoc game-state
                         :player
                         (assoc player :segment (segment-entity-cw player)))
+      key-codes/UP (assoc game-state
+                        :player
+                        (assoc player :step (- (:step player) 10)))
+      key-codes/DOWN (assoc game-state
+                        :player
+                        (assoc player :step (+ (:step player) 10)))
       key-codes/SPACE (assoc game-state
                         :projectile-list
                         (add-player-projectile projectile-list player))
