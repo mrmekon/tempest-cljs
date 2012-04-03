@@ -216,20 +216,10 @@ flipper appears to flip 'inside' the level:
      (not (nil? permanent-dir)) (swap-flipper-permanent-dir flipper)
      :else flipper)))
 
-(defn consider-flipping
-  [entity-list]
-  ((fn [oldlist newlist]
-     (let [entity (first oldlist)]
-       (if (empty? entity)
-         newlist
-         (recur (rest oldlist)
-                (cons (maybe-engage-flipping entity) newlist))))
-         ) entity-list []))
-
 (defn update-entity-is-flipping
   [game-state]
   (let [{enemy-list :enemy-list} game-state]
-    (assoc game-state :enemy-list (consider-flipping enemy-list))))
+    (assoc game-state :enemy-list (map maybe-engage-flipping enemy-list))))
 
 (defn update-entity-flippyness
   [game-state]
@@ -302,16 +292,9 @@ flipper appears to flip 'inside' the level:
                   (build-projectile level 0 5 :step 100))))))
   
 (defn update-entity-list
-  "Recursively call update-entity-position! on all entities in list."
+  "Call update-entity-position! on all entities in list."
   [entity-list]
-  ((fn [oldlist newlist]
-     (let [entity (first oldlist)]
-       (if (empty? entity)
-         newlist
-         (recur (rest oldlist)
-                (cons (update-entity-position! entity) newlist))))
-         ) entity-list []))
-
+  (map update-entity-position! entity-list))
 
 (defn entity-between-steps
   "Returns true of entity is on seg-idx, and between steps step0 and step1,
