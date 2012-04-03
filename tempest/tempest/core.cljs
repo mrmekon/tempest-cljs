@@ -157,7 +157,7 @@ flipper appears to flip 'inside' the level:
     (assoc flipper
       :stride 0
       :old-stride (:stride flipper)
-      :flip-dir (DirectionEnum direction)
+      :flip-dir direction
       :flip-cur-angle 0
       :flip-to-segment seg-idx
       :flip-point point
@@ -177,14 +177,22 @@ flipper appears to flip 'inside' the level:
 (defn random-direction-string
   []
   (condp = (rand-int 2)
-        0 "CW"
-        "CCW"))
+        0 (DirectionEnum "CW")
+        (DirectionEnum "CCW")))
 
 (defn segment-for-flip-direction
   [flipper flip-dir]
   (condp = flip-dir
-        "CW" (segment-entity-cw flipper)
+        (DirectionEnum "CW") (segment-entity-cw flipper)
         (segment-entity-ccw flipper)))
+
+(defn swap-flipper-permanent-dir
+  [flipper]
+  (let [cur-dir (:flip-permanent-dir flipper)
+        new-dir (if (= (DirectionEnum "CW") cur-dir)
+                  (DirectionEnum "CCW")
+                  (DirectionEnum "CW"))]
+    (assoc flipper :flip-permanent-dir new-dir)))
 
 (defn maybe-engage-flipping
   [flipper]
@@ -195,13 +203,17 @@ flipper appears to flip 'inside' the level:
                           (= (:step flipper) 200)
                           )
                          (= (:flip-dir flipper) (DirectionEnum "NONE")))
-        flip-dir (or (:flip-permanent-dir flipper) (random-direction-string))
+        permanent-dir (:flip-permanent-dir flipper)
+        flip-dir (or permanent-dir (random-direction-string))
         flip-seg-idx (segment-for-flip-direction flipper flip-dir)
-        cw? (= flip-dir "CW")]
-    (if (and should-flip
-             (not= flip-seg-idx (:segment flipper)))             
-      (mark-flipper-for-flipping flipper flip-dir flip-seg-idx cw?)
-      flipper)))
+        cw? (= flip-dir (DirectionEnum "CW"))]
+    (cond
+     (false? should-flip) flipper
+     (not= flip-seg-idx (:segment flipper)) (mark-flipper-for-flipping
+                                             flipper flip-dir
+                                             flip-seg-idx cw?)
+     (not (nil? permanent-dir)) (swap-flipper-permanent-dir flipper)
+     :else flipper)))
 
 (defn consider-flipping
   [entity-list]
