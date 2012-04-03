@@ -81,16 +81,16 @@ after passing through all the other functions.  This implements the game loop.
   {:step step
    :stride 1
    :segment seg-idx
+   :damage-segment seg-idx
    :level level
    :hits-remaining 1
    :path-fn #([])
    :bounding-fn #(identity 0)
-
-    :flip-dir (DirectionEnum "NONE")
-    :flip-point [0 0]
-    :flip-stride 1
-    :flip-max-angle 0
-    :flip-cur-angle 0
+   :flip-dir (DirectionEnum "NONE")
+   :flip-point [0 0]
+   :flip-stride 1
+   :flip-max-angle 0
+   :flip-cur-angle 0
    })
 
 (defn build-flipper
@@ -101,6 +101,7 @@ after passing through all the other functions.  This implements the game loop.
     :flip-dir (DirectionEnum "NONE")
     :flip-point [0 0]
     :flip-stride 1
+    :flip-step-count 100
     :flip-max-angle 0
     :flip-cur-angle 0
     :flip-permanent-dir nil
@@ -150,7 +151,7 @@ flipper appears to flip 'inside' the level:
                    (:segment flipper)
                    seg-idx
                    cw?)
-        step-count 10
+        step-count (:flip-step-count flipper)
         stride (flip-angle-stride max-angle step-count cw?)
         permanent (if (= (:steps (:level flipper))
                          (:step flipper)) direction nil)]
@@ -238,11 +239,15 @@ flipper appears to flip 'inside' the level:
 (defn update-flip-angle
   [flipper]
   (let [new-angle (+ (:flip-stride flipper) (:flip-cur-angle flipper))
-        remaining (dec (:flip-steps-remaining flipper))]
+        remaining (dec (:flip-steps-remaining flipper))
+        new-seg (if (<= remaining (/ (:flip-step-count flipper) 2))
+                  (:flip-to-segment flipper)
+                  (:segment flipper))]
     (if (not= (:flip-dir flipper) (DirectionEnum "NONE"))
       (if (< remaining 0)
         (update-entity-stop-flipping flipper)
         (assoc flipper
+          :damage-segment new-seg
           :flip-cur-angle new-angle
           :flip-steps-remaining remaining))
       flipper)))
@@ -315,7 +320,7 @@ flipper appears to flip 'inside' the level:
   (let [min (min step0 step1)
         max (max step0 step1)]
     (and
-     (= (:segment entity) seg-idx)
+     (= (:damage-segment entity) seg-idx)
      (>= (:step entity) min)
      (<= (:step entity) max))))
 
