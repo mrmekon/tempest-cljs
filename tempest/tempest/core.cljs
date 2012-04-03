@@ -67,9 +67,11 @@ after passing through all the other functions.  This implements the game loop.
    :path-fn path/projectile-path-on-level
    })
 
-(def DirectionEnum {"NONE" 0 "CW" 1 "CCW" 2})
+(def ^{:doc "Enumeration of directions a flipper can be flipping."}
+  DirectionEnum {"NONE" 0 "CW" 1 "CCW" 2})
 
 (defn direction-string-from-value
+  "Given a value from DirectionEnum, return the corresponding string."
   [val]
   (first (first (filter #(= 1 (peek %)) (into [] maptest)))))
 
@@ -94,6 +96,7 @@ after passing through all the other functions.  This implements the game loop.
    })
 
 (defn build-flipper
+  "A more specific form of build-enemy for initializing a flipper."
   [level seg-idx & {:keys [step] :or {step 0}}]
   (assoc (build-enemy level seg-idx :step step)
     :bounding-fn path/flipper-path-bounding-box
@@ -106,10 +109,6 @@ after passing through all the other functions.  This implements the game loop.
     :flip-cur-angle 0
     :flip-permanent-dir nil
     ))
-
-;; TODO: CW usually right, not always
-;; CCW rotation goes through level
-;; adding 360 deg to angle fixes it... but when??
 
 (defn flip-angle-stride
   "Returns the angle stride of a flipper, which is how many radians to
@@ -139,6 +138,9 @@ flipper appears to flip 'inside' the level:
    :else (if cw? dir1 dir0))))
 
 (defn mark-flipper-for-flipping
+  "Updates a flipper's map to indicate that it is currently flipping in the
+   given direction, to the given segment index.  cw? should be true if
+   flipping clockwise, false for counter-clockwise."
   [flipper direction seg-idx cw?]
   (let [point (path/flip-point-between-segments
                (:level flipper)
@@ -168,6 +170,7 @@ flipper appears to flip 'inside' the level:
       :flip-permanent-dir permanent)))
 
 (defn update-entity-stop-flipping
+  "Updates an entity and marks it as not currently flipping."
   [flipper]
   (assoc flipper
     :stride (:old-stride flipper)
@@ -175,19 +178,27 @@ flipper appears to flip 'inside' the level:
     :flip-cur-angle 0
     :segment (:flip-to-segment flipper)))
 
-(defn random-direction-string
+(defn random-direction
+  "Returns a random direction from DirectionEnum (not 'NONE')"
   []
   (condp = (rand-int 2)
         0 (DirectionEnum "CW")
         (DirectionEnum "CCW")))
 
 (defn segment-for-flip-direction
+  "Returns the segment that the given flipper would flip into if it flipped
+   in direction flip-dir.  If the flipper can't flip that way, it will
+   return the flipper's current segment."
   [flipper flip-dir]
   (condp = flip-dir
         (DirectionEnum "CW") (segment-entity-cw flipper)
         (segment-entity-ccw flipper)))
 
 (defn swap-flipper-permanent-dir
+  "Given a flipper with its 'permanent direction' set, this swaps the
+   permanent direction to be opposite.  A flipper's permanent direction is
+   the direction it flips constantly along the outermost edge of the level
+   until it hits a boundary."
   [flipper]
   (let [cur-dir (:flip-permanent-dir flipper)
         new-dir (if (= (DirectionEnum "CW") cur-dir)
@@ -196,6 +207,10 @@ flipper appears to flip 'inside' the level:
     (assoc flipper :flip-permanent-dir new-dir)))
 
 (defn maybe-engage-flipping
+  "Given a flipper, returns the flipper possibly modified to be in a state
+   of flipping to another segment.  This will always be true if the flipper
+   is on the outermost edge of the level, and will randomly be true if it
+   has not reached the edge."
   [flipper]
   (let [should-flip (and (or
                           (= (:step flipper) 50)
@@ -205,7 +220,7 @@ flipper appears to flip 'inside' the level:
                           )
                          (= (:flip-dir flipper) (DirectionEnum "NONE")))
         permanent-dir (:flip-permanent-dir flipper)
-        flip-dir (or permanent-dir (random-direction-string))
+        flip-dir (or permanent-dir (random-direction))
         flip-seg-idx (segment-for-flip-direction flipper flip-dir)
         cw? (= flip-dir (DirectionEnum "CW"))]
     (cond
@@ -217,16 +232,23 @@ flipper appears to flip 'inside' the level:
      :else flipper)))
 
 (defn update-entity-is-flipping
+  "Decide if an enemy should start flipping for every enemy on the level."
   [game-state]
   (let [{enemy-list :enemy-list} game-state]
     (assoc game-state :enemy-list (map maybe-engage-flipping enemy-list))))
 
 (defn update-entity-flippyness
+  "Update the position of any actively flipping enemy for every enemy on the
+   level."
   [game-state]
   (let [{enemy-list :enemy-list} game-state]
     (assoc game-state :enemy-list (map update-flip-angle enemy-list))))
 
 (defn update-flip-angle
+  "Given a flipper in the state of flipping, updates its current angle.  If
+   the update would cause it to 'land' on its new segment, the flipper is
+   updated and returned as a no-longer-flipping.  If the given enemy is
+   not flipping, returns it unchanged."
   [flipper]
   (let [new-angle (+ (:flip-stride flipper) (:flip-cur-angle flipper))
         remaining (dec (:flip-steps-remaining flipper))

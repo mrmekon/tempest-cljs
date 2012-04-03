@@ -122,10 +122,7 @@ level functions to draw complete game entities using the primitives.
                (path/round-path ((:path-fn entity) entity))
                true
                (:flip-point entity)
-               ;;[20 -20]
-               (:flip-cur-angle entity)
-               ;;0
-               )
+               (:flip-cur-angle entity))
     (.closePath context)))
 
 (defn draw-board

@@ -37,6 +37,9 @@ and 'paths' consisting of a sequence of coordinates.
      (polar-to-cartesian-coords point1)]))
 
 (defn cartesian-point-between-segments
+  "Returns the cartesian coordinates of the point on the edge in between
+   the two given segments at the given step.  This is the point about which
+   a flipping enemy should rotate."
   [level seg-idx0 seg-idx1 step]
   (let [line (edge-line-between-segments level seg-idx0 seg-idx1)
         line-steps (step-length-for-level-line level line)        
@@ -46,6 +49,8 @@ and 'paths' consisting of a sequence of coordinates.
 
 
 (defn edge-line-between-segments
+  "Returns the polar coordinates (i.e. description of a line) of the line
+   between the given segments."
   [level seg-idx0 seg-idx1]
   (let [segs0 (get (:segments level) seg-idx0)
         segs1 (get (:segments level) seg-idx1)
@@ -63,6 +68,9 @@ given level."
   ))
 
 (defn flip-point-between-segments
+  "Returns the point about which an enemy on seg-idx-cur flipping to
+   seg-idx-new from step step should be rotated.  cw? should be true
+   if enemy would be flipping clockwise, false otherwise."
   [level seg-idx-cur seg-idx-new step cw?]
   (let [[x0 y0] (cartesian-point-between-segments level
                                                   seg-idx-cur
@@ -73,19 +81,6 @@ given level."
         edge-points (cartesian-edge-coordinates level seg-idx-new step)]
     [(- x1 x0) (- y0 y1)]))
 
-(comment
-(defn flip-point-between-segments
-  [level seg-idx-cur seg-idx-new step cw?]
-  (let [[x0 y0] (polar-to-cartesian-coords
-                 (polar-segment-midpoint level seg-idx-cur step))
-        [[x1 y1] [x2 y2]] (cartesian-edge-coordinates level seg-idx-new step)]
-    (.log js/console (str "CW? " (pr-str cw?) " "
-                          (pr-str [(- x0 x2) (- y2 y0)]
-                                  [(- x1 x0) (- y0 y1)])))
-    (if cw?
-      [(- x0 x2) (- y2 y0)]
-      [(- x1 x0) (- y0 y1)])))
-)
 
 (defn rebase-origin
   "Return cartesian coordinate 'point' in relation to 'origin'."
@@ -175,18 +170,6 @@ given level."
   (polar-segment-midpoint (:level entity)
                           (:segment entity)
                           (:step entity)))
-
-
-(comment
-  (defn polar-entity-coord
-  "Returns current polar coordinates to the entity."
-  [entity]
-  (let [steplen (step-length-segment-midpoint (:level entity)
-                                              (:segment entity))
-        offset (* steplen (:step entity))
-        midpoint (segment-midpoint (:level entity) (:segment entity))]
-    (polar-extend offset midpoint)))
-  )
 
 (defn step-length-segment-midpoint
   "Finds the 'step length' of a line through the middle of a level's segment.
