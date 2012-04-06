@@ -712,7 +712,7 @@ again with the current deref of the global state.
       state
       (let [key (first queue)
             valid? (compare-and-set! *key-event-queue* queue (rest queue))]
-        (if valid?
+        (if (and valid? (not (:captured? (:player game-state))))
           (recur (handle-keypress state key) @*key-event-queue*)
           (recur state @*key-event-queue*))))))
 
