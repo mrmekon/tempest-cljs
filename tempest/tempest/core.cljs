@@ -54,6 +54,7 @@ after passing through all the other functions.  This implements the game loop.
        remove-collided-entities
        update-projectile-locations
        update-enemy-locations
+       maybe-make-enemy
        check-if-player-captured
        update-entity-is-flipping
        update-entity-flippyness
@@ -86,6 +87,7 @@ after passing through all the other functions.  This implements the game loop.
    :bgcontext nil
    :anim-fn identity
    :dims {:width 0 :height 0}
+   :level-idx 0
    :level nil
    :frame-count 0
    :frame-time 0
@@ -95,6 +97,14 @@ after passing through all the other functions.  This implements the game loop.
    :zoom 0.0
    })
 
+(defn change-level
+  "Changes current level of game."
+  [game-state level-idx]
+  (let [level (get levels/*levels* level-idx)]
+    (assoc game-state
+      :level-idx level-idx
+      :level level
+      :player (build-player level 0))))
 
 (defn build-projectile
   "Returns a dictionary describing a projectile (bullet) on the given level,
@@ -152,6 +162,30 @@ after passing through all the other functions.  This implements the game loop.
     :flip-permanent-dir nil
     :can-flip true
     ))
+
+(defn maybe-make-enemy
+  "Randomly create new enemies if the level needs more.  Each level has a total
+   count and probability of arrival for each type of enemy.  When a new enemy
+   is added by this function, the total count for that type is decremented.
+   If zero enemies are on the board, probability of placing one is increased
+   two-fold to avoid long gaps with nothing to do."
+  [game-state]
+  (let [level (:level game-state)
+        segments (count (:segments level))
+        remaining (:remaining level)
+        enemy-list (:enemy-list game-state)
+        r (if (pos? (count enemy-list)) (rand) (/ (rand) 2))]
+    (cond
+     (and (<= r (:flipper (:probability level))) (pos? (:flipper remaining)))
+     (do
+       (assoc game-state
+         :enemy-list (cons (build-flipper level (rand-int segments)) enemy-list)
+         :level (assoc level
+                  :remaining (assoc remaining
+                               :flipper (dec (:flipper remaining))))))
+     :else game-state)))
+
+;;(count (:segments level))
 
 (defn flip-angle-stride
   "Returns the angle stride of a flipper, which is how many radians to
@@ -277,16 +311,19 @@ flipper appears to flip 'inside' the level:
      :else flipper)))
 
 (defn mark-player-captured
+  "Marks player as being captured."
   [player]
   (assoc player
     :captured? true
     :stride -4))
 
 (defn mark-enemy-capturing
+  "Marks enemy as having captured the player."
   [enemy]
   (assoc enemy
     :capturing true
     :can-flip false
+    :step (- (:step enemy) 10) ;; looks better if enemy leads player
     :stride -4))
 
 (defn enemy-is-on-player?

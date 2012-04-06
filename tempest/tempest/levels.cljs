@@ -252,20 +252,36 @@ Functions related to generating paths representing levels.
    vector of segments constructed of pairs of lines, and a length function.
    This function takes a vector of lines, and a boolean specifying whether
    the level is a closed loop, or open."
-  [lines loops?]
+  [lines loops? enemy-count enemy-probability]
   {:lines lines
    :loops? loops?
    :segments (build-segment-list (- (count lines) 1) loops?)
    :length-fn *default-length-fn*
-   :steps *default-steps-per-segment*})
+   :steps *default-steps-per-segment*
+   :remaining enemy-count
+   :probability enemy-probability})
 
 (def *levels*
-  [ (make-level-entry *level1_lines* false)
-    (make-level-entry *level2_lines* true)
-    (make-level-entry *level3_lines* false)
-    (make-level-entry *level4_lines* false)
-    (make-level-entry *level5_lines* false)
-    (make-level-entry *level6_lines* true)
-    (make-level-entry *level7_lines* false)])
+  [ (make-level-entry *level1_lines* false
+                      {:flipper 20}
+                      {:flipper 0.01})
+    (make-level-entry *level2_lines* true
+                      {:flipper 20}
+                      {:flipper 0.01})
+    (make-level-entry *level3_lines* false
+                      {:flipper 20}
+                      {:flipper 0.01})
+    (make-level-entry *level4_lines* false
+                      {:flipper 20}
+                      {:flipper 0.01})
+    (make-level-entry *level5_lines* false
+                      {:flipper 20}
+                      {:flipper 0.01})
+    (make-level-entry *level6_lines* true
+                      {:flipper 20}
+                      {:flipper 0.01})
+    (make-level-entry *level7_lines* false
+                      {:flipper 20}
+                      {:flipper 0.01})])
 
 

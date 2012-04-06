@@ -72,9 +72,9 @@ Publicly exported functions to embed Tempest game in HTML.
 (defn ^:export canvasDraw
   "Begins a game of tempest.  'level' specified as a string representation
    of an integer."
-  [level]
+  [level-str]
   (let [document (dom/getDocument)
-        level (get levels/*levels* (- (js/parseInt level) 1))
+        level-idx (- (js/parseInt level-str) 1)
         canvas (dom/getElement "canv-fg")
         context (.getContext canvas "2d")
         bgcanvas (dom/getElement "canv-bg")
@@ -85,14 +85,17 @@ Publicly exported functions to embed Tempest game in HTML.
     (events/listen handler "key" (fn [e] (c/queue-keypress e)))
 
     (let [empty-game-state (c/build-game-state)
-          game-state (assoc empty-game-state
-                       :player (c/build-player level 7)
-                       :level level
-                       :context context
-                       :bgcontext bgcontext
-                       :dims dims
-                       :anim-fn (c/animationFrameMethod)
-                       :enemy-list (enemy-on-each-segment level))]
+          game-state (assoc
+                         (c/change-level
+                          (assoc empty-game-state
+                            :context context
+                            :bgcontext bgcontext
+                            :dims dims
+                            :anim-fn (c/animationFrameMethod)
+                            :enemy-list )
+                          level-idx)
+                       :enemy-list (enemy-on-each-segment
+                                    (get levels/*levels* level-idx)))]
       (c/next-game-state game-state))))
 
 
