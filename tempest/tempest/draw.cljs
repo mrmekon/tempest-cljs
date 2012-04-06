@@ -127,13 +127,25 @@ level functions to draw complete game entities using the primitives.
 (defn draw-board
   "Draws a level on a 2D context of an HTML5 canvas with :height and :width
    specified in dims."
-  [context dims level]
+  [context dims level zoom]
   (doseq []
-   (.beginPath context)
-   (doseq [idx (range (count (:segments level)))]
+    (.save context)
+    (.scale context zoom zoom)
+    (.beginPath context)
+    (doseq [idx (range (count (:segments level)))]
       (draw-rectangle
        context
        (path/round-path (path/rectangle-to-canvas-coords
-        dims (path/rectangle-for-segment level idx)))))
-    (.closePath context)))
+                         dims
+                         (path/rectangle-for-segment level idx)))))
+    (.closePath context)
+    (.restore context)))
 
+;;  (path/round-path (map #(list (+ (- (:width dims) (* (:width dims) zoom)) (first %)) (peek %)) (path/rectangle-to-canvas-coords dims (path/rectangle-for-segment level idx)))))
+
+
+(defn clear-context
+  "Clears an HTML5 context"
+  [context dims]
+  (let [{width :width height :height} dims]
+    (.clearRect context 0 0 width height)))

@@ -39,9 +39,17 @@ again by the browser sometime in the future with the update game-state
 after passing through all the other functions.  This implements the game loop.
 "
   [game-state]
+  (if (:is-zooming? game-state)
+    (game-logic-non-playable game-state)
+    (game-logic-playable game-state)))
+
+(defn game-logic-playable
+  "Called by next-game-state when game and player are active."
+  [game-state]
   (->> game-state
        dequeue-keypresses
        clear-frame
+       draw-board
        render-frame
        remove-collided-entities
        update-projectile-locations
@@ -54,8 +62,39 @@ after passing through all the other functions.  This implements the game loop.
        maybe-render-fps-display
        schedule-next-frame
        ))
+  
+(defn game-logic-non-playable
+  "Called by next-game-state for non-playable animations."
+  [game-state]
+  (->> game-state
+       clear-frame
+       draw-board
+       render-frame
+       update-frame-count
+       maybe-render-fps-display
+       schedule-next-frame))
 
 ;; ---
+
+(defn build-game-state
+  "Returns an empty game-state map."
+  []
+  {:enemy-list '()
+   :projectile-list '()
+   :player '()
+   :context nil
+   :bgcontext nil
+   :anim-fn identity
+   :dims {:width 0 :height 0}
+   :level nil
+   :frame-count 0
+   :frame-time 0
+   :paused? false
+   :is-zooming? true
+   :zoom-in? true
+   :zoom 0.0
+   })
+
 
 (defn build-projectile
   "Returns a dictionary describing a projectile (bullet) on the given level,
@@ -240,7 +279,7 @@ flipper appears to flip 'inside' the level:
 (defn mark-player-captured
   [player]
   (assoc player
-    :captured true
+    :captured? true
     :stride -4))
 
 (defn mark-enemy-capturing
@@ -274,7 +313,7 @@ flipper appears to flip 'inside' the level:
    If capture is in progress, returns game-state with player and enemy-list
    updated."
   [game-state]
-  (if (:captured (:player game-state))
+  (if (:captured? (:player game-state))
     game-state
     (if-let [[player enemy-list] (player-and-enemies-if-captured
                                   (:player game-state)
@@ -322,11 +361,13 @@ flipper appears to flip 'inside' the level:
   [level seg-idx]
   {:segment seg-idx
    :level level
-   :captured false
+   :captured? false
    :step (:steps level)
    :bullet-stride -5
    :stride 0
-   :path path/*player-path*})
+   :path path/*player-path*
+   :is-dead? false
+   })
 
 (defn entity-next-step
   "Returns the next step position of given entity, taking into account
@@ -488,13 +529,56 @@ flipper appears to flip 'inside' the level:
 
 
 (defn animate-player-capture
+  "Updates player's position on board while player is in the process of being
+   captured by an enemy, and marks player as dead when he reaches the inner
+   boundary of the level.  When player dies, level zoom-out is initiated."
   [global-state]
-  (if (:captured (:player global-state))
-    (assoc global-state
-      :player (update-entity-position! (:player global-state)))
-    global-state))
+  (let [player (:player global-state)
+        captured? (:captured? player)
+        isdead? (zero? (:step player))]
+    (cond
+     (false? captured?) global-state
+     (true? isdead?) (assoc global-state
+                       :player (assoc player :is-dead? true)
+                       :enemy-list '()
+                       :is-zooming? true
+                       :zoom-in? false)
+     :else  (assoc global-state :player (update-entity-position! player)))))
 
+(defn update-zoom
+  "Updates current zoom value of the level, based on direction of :zoom-in?
+   in the global-state.  This is used to animate the board zooming in or
+   zooming out at the start or end of a round."
+  [global-state]
+  (let [zoom (:zoom global-state)
+        zoom-in? (:zoom-in? global-state)
+        zoom-step 0.04
+        newzoom (if zoom-in? (+ zoom zoom-step) (- zoom zoom-step))
+        target (if zoom-in? 1.0 0.0)
+        cmp (if zoom-in? >= <=)]
+    (if (cmp zoom target) (assoc global-state :is-zooming? false)
+        (if (cmp newzoom target)
+          (assoc global-state :zoom target)
+          (assoc global-state :zoom newzoom)))))
 
+(defn draw-board
+  "Draws the level when level is zooming in or out, and updates the zoom level.
+   This doesn't redraw the board normally, since the board is drawn on a
+   different HTML5 canvas than the players for efficiency."
+  [global-state]
+  (let [is-zooming? (:is-zooming? global-state)
+        zoom (:zoom global-state)
+        {width :width height :height} (:dims global-state)]
+    (if is-zooming?
+      (do
+        (draw/clear-context (:bgcontext global-state) (:dims global-state))
+        (draw/draw-board (:bgcontext global-state)
+                         {:width (/ width zoom) :height (/ height zoom)}
+                         (:level global-state)
+                         zoom)
+        (update-zoom global-state))
+        global-state)))
+        
 
 (defn collisions-with-projectile
   "Returns map with keys true and false.  Values under true key have or
@@ -660,28 +744,11 @@ The setTimeout fail-over is hard-coded to attempt 30fps.
      options)))
 
 
-(defn build-game-state
-  "Returns an empty game-state map."
-  []
-  {:enemy-list '()
-   :projectile-list '()
-   :player '()
-   :context nil
-   :anim-fn identity
-   :dims {:width 0 :height 0}
-   :level nil
-   :frame-count 0
-   :frame-time 0
-   :paused? false
-   })
-
 (defn clear-frame
   "Returns game state unmodified, clears the HTML5 canvas as a side-effect."
   [game-state]
-  (let [{context :context
-         {width :width height :height} :dims}
-        game-state]
-    (.clearRect context 0 0 width height dims)
+  (do
+    (draw/clear-context (:context game-state) (:dims game-state))
     game-state))
 
 (defn render-frame
@@ -695,7 +762,8 @@ The setTimeout fail-over is hard-coded to attempt 30fps.
          projectile-list :projectile-list
          player :player}
         game-state]
-    (draw/draw-player context dims level player)
+    (if (not (:is-dead? player))
+      (draw/draw-player context dims level player))
     (draw/draw-entities context dims level enemy-list)
     (draw/draw-entities context dims level projectile-list)
     game-state))

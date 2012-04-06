@@ -82,7 +82,6 @@ Publicly exported functions to embed Tempest game in HTML.
         handler (goog.events.KeyHandler. document true)
         dims {:width (.-width canvas) :height (.-height canvas)}]
 
-    (draw/draw-board bgcontext dims level)
     (events/listen handler "key" (fn [e] (c/queue-keypress e)))
 
     (let [empty-game-state (c/build-game-state)
@@ -90,6 +89,7 @@ Publicly exported functions to embed Tempest game in HTML.
                        :player (c/build-player level 7)
                        :level level
                        :context context
+                       :bgcontext bgcontext
                        :dims dims
                        :anim-fn (c/animationFrameMethod)
                        :enemy-list (enemy-on-each-segment level))]
