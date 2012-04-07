@@ -47,7 +47,9 @@ after passing through all the other functions.  This implements the game loop.
   "Called by next-game-state when game and player are active."
   [game-state]
   (->> game-state
+       clear-player-segment
        dequeue-keypresses
+       highlight-player-segment
        maybe-change-level
        clear-frame
        draw-board
@@ -162,6 +164,10 @@ after passing through all the other functions.  This implements the game loop.
 (def ^{:doc "Enumeration of directions a flipper can be flipping."}
   DirectionEnum {"NONE" 0 "CW" 1 "CCW" 2})
 
+(def ^{:doc "Enumeration of types of enemies."}
+  EnemyEnum {"NONE" 0 "FLIPPER" 1 "TANKER" 2
+             "SPIKER" 3 "FUSEBALL" 4 "PULSAR" 5})
+
 (defn direction-string-from-value
   "Given a value from DirectionEnum, return the corresponding string."
   [val]
@@ -179,7 +185,6 @@ after passing through all the other functions.  This implements the game loop.
    :level level
    :hits-remaining 1
    :path-fn #([])
-   :bounding-fn #(identity 0)
    :flip-dir (DirectionEnum "NONE")
    :flip-point [0 0]
    :flip-stride 1
@@ -187,13 +192,24 @@ after passing through all the other functions.  This implements the game loop.
    :flip-cur-angle 0
    :can-flip false
    :shoot-probability 0
+   :type (EnemyEnum "NONE")
    })
+
+(defn build-tanker
+  [level seg-idx & {:keys [step] :or {step 0}}]
+  (assoc (build-enemy level seg-idx :step step)
+    :type (EnemyEnum "TANKER")
+    :path-fn path/tanker-path-on-level
+    :can-flip false
+    :stride 0.2
+    :shoot-probability 0.0
+    ))
 
 (defn build-flipper
   "A more specific form of build-enemy for initializing a flipper."
   [level seg-idx & {:keys [step] :or {step 0}}]
   (assoc (build-enemy level seg-idx :step step)
-    :bounding-fn path/flipper-path-bounding-box
+    :type (EnemyEnum "FLIPPER")
     :path-fn path/flipper-path-on-level
     :flip-dir (DirectionEnum "NONE")
     :flip-point [0 0]
@@ -667,6 +683,29 @@ flipper appears to flip 'inside' the level:
           (assoc global-state :zoom target)
           (assoc global-state :zoom newzoom)))))
 
+(defn clear-player-segment
+  "Returns game-state unchanged, and as a side affect clears the player's
+   current segment back to blue.  To avoid weird color mixing, it is cleared
+   to black first (2px wide), then redrawn as blue (1.5px wide).  This looks
+   right, but is different from how the board is drawn when done all at once."
+  [game-state]
+  (do
+    (set! (. (:bgcontext game-state) -lineWidth) 2)
+    (draw/draw-player-segment game-state {:r 0 :g 0 :b 0})
+    (set! (. (:bgcontext game-state) -lineWidth) 1.5)
+    (draw/draw-player-segment game-state {:r 10 :g 10 :b 100})
+    game-state))
+
+(defn highlight-player-segment
+  "Returns game-state unchanged, and as a side effect draws the player's
+   current segment with a yellow border."
+  [game-state]
+  (do
+    (set! (. (:bgcontext game-state) -lineWidth) 1)
+    (draw/draw-player-segment game-state {:r 150 :g 150 :b 15})
+    game-state))
+
+
 (defn draw-board
   "Draws the level when level is zooming in or out, and updates the zoom level.
    This doesn't redraw the board normally, since the board is drawn on a
@@ -678,10 +717,9 @@ flipper appears to flip 'inside' the level:
     (if is-zooming?
       (do
         (draw/clear-context (:bgcontext global-state) (:dims global-state))
-        (draw/draw-board (:bgcontext global-state)
-                         {:width (/ width zoom) :height (/ height zoom)}
-                         (:level global-state)
-                         zoom)
+        (draw/draw-board (assoc global-state
+                           :dims {:width (/ width zoom)
+                                  :height (/ height zoom)}))
         (update-zoom global-state))
         global-state)))
         

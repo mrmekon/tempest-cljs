@@ -353,6 +353,15 @@ given level."
      (enemy-angle flipper)
      (flipper-path-with-width (* 0.8 (entity-desired-width flipper))))))
 
+(defn tanker-path-on-level
+  "Returns the path of polar coordinates to draw a flipper correctly at its
+   current location.  It corrects for size and angle."
+  [tanker]
+  (let [coord (polar-entity-coord tanker)]
+    (rotate-path
+     (enemy-angle tanker)
+     (tanker-path-with-width (* 0.8 (entity-desired-width tanker))))))
+
 (defn projectile-path-on-level
   "Returns the path of polar coordinates to draw a projectile correctly at its
    current location.  It corrects for size and angle."
@@ -361,6 +370,20 @@ given level."
     (rotate-path
      (enemy-angle projectile)
      (projectile-path-with-width (* 0.3 (entity-desired-width projectile))))))
+
+(defn tanker-path-with-width
+  "Returns a path to draw a 'flipper' enemy with given width."
+  [width]
+  (let [r (/ width (js/Math.cos (util/deg-to-rad 16)))]
+    [[0 0]
+     [(/ r 2) 16]
+     [(/ r 4) 214]
+     [(/ r 4) 326]
+     [r 164]
+     [(/ r 4) 326]
+     [(/ r 4) 214]
+     [(/ r 2) 16]]))
+
 
 (defn flipper-path-with-width
   "Returns a path to draw a 'flipper' enemy with given width."

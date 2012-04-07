@@ -127,30 +127,44 @@ level functions to draw complete game entities using the primitives.
                          (:flip-point entity)
                          (:flip-cur-angle entity))
       (.closePath context))))
+
+(defn draw-player-segment
+  "Draws just the segment of the board that the player is on, with the given
+   color."
+  [{:keys [dims level zoom player] context :bgcontext {pseg :segment} :player}
+   {:keys [r g b]}]
+  (.beginPath context)
+  (set! (. context -strokeStyle) (str "rgb(" r "," g "," b ")"))
+  (draw-rectangle
+   context
+   (path/round-path (path/rectangle-to-canvas-coords
+                     dims
+                     (path/rectangle-for-segment level pseg))))
+  (.closePath context))
   
+
 (defn draw-board
   "Draws a level on a 2D context of an HTML5 canvas with :height and :width
    specified in dims."
-  [context dims level zoom]
+  [{:keys [dims level zoom player] context :bgcontext}]
   (doseq []
     (.save context)
     ;; To fix bug in Firefox.  scale to 0.0 breaks it.
     (if (zero? zoom)
       (.scale context 0.00001 0.0001)
       (.scale context zoom zoom))
-    (.beginPath context)
+    (set! (. context -lineWidth) 1)
     (set! (. context -strokeStyle) (str "rgb(10,10,100)"))
+    (.beginPath context)
     (doseq [idx (range (count (:segments level)))]
       (draw-rectangle
        context
        (path/round-path (path/rectangle-to-canvas-coords
                          dims
                          (path/rectangle-for-segment level idx)))))
-    (.closePath context)
     (.restore context)
+    (.closePath context)
     ))
-
-;;  (path/round-path (map #(list (+ (- (:width dims) (* (:width dims) zoom)) (first %)) (peek %)) (path/rectangle-to-canvas-coords dims (path/rectangle-for-segment level idx)))))
 
 
 (defn clear-context

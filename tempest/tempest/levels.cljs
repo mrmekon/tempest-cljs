@@ -230,6 +230,7 @@ Functions related to generating paths representing levels.
    [*default-line-length* 342]
    ])
 
+
 ;; Flat level with 14 segments
 (def *level3_lines* (vec (flat-level 7 15 80)))
 
@@ -249,8 +250,27 @@ Functions related to generating paths representing levels.
 (def *level7_lines* (vec (oblong-level [135 45 135 45] 15 3)))
 
 
-;; Oblong level, an open "W"
+;; Oblong level
 (def *level8_lines* (vec (oblong-level [135 105 90 33] 8 10)))
+
+;; Oblong level, V shape
+(def *level9_lines* (vec (oblong-level [50 50 60 60 70] 15 60)))
+
+;; Custom level, a 'V' in horizontal and vertical steps
+(def *level10_lines*
+  [[38 203]
+   [43 217]
+   [34 229]
+   [44 239]
+   [39 255]
+   [50 262]
+   [50 278]
+   [39 284]
+   [44 300]
+   [34 310]
+   [43 322]
+   [38 336]
+   ])
 
 
 (defn make-level-entry 
@@ -297,6 +317,12 @@ Functions related to generating paths representing levels.
                       {:flipper 0.01}
                       :length-fn #(* 10 %)
                       :steps 400)
+    (make-level-entry *level9_lines* false
+                      {:flipper 20}
+                      {:flipper 0.01})
+    (make-level-entry *level10_lines* false
+                      {:flipper 20}
+                      {:flipper 0.01})
     ])
 
 
