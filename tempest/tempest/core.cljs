@@ -801,8 +801,8 @@ The setTimeout fail-over is hard-coded to attempt 30fps.
         game-state]
     (if (not (:is-dead? player))
       (draw/draw-player context dims level player))
-    (draw/draw-entities context dims level enemy-list)
-    (draw/draw-entities context dims level projectile-list)
+    (draw/draw-entities context dims level enemy-list {:r 150 :g 10 :b 10})
+    (draw/draw-entities context dims level projectile-list {:r 255 :g 255 :b 255})
     game-state))
 
 (defn remove-collided-entities

@@ -85,17 +85,14 @@ Publicly exported functions to embed Tempest game in HTML.
     (events/listen handler "key" (fn [e] (c/queue-keypress e)))
 
     (let [empty-game-state (c/build-game-state)
-          game-state (assoc
-                         (c/change-level
-                          (assoc empty-game-state
-                            :context context
-                            :bgcontext bgcontext
-                            :dims dims
-                            :anim-fn (c/animationFrameMethod)
-                            :enemy-list )
-                          level-idx)
-                       :enemy-list (enemy-on-each-segment
-                                    (get levels/*levels* level-idx)))]
+          game-state (c/change-level
+                      (assoc empty-game-state
+                        :context context
+                        :bgcontext bgcontext
+                        :dims dims
+                        :anim-fn (c/animationFrameMethod)
+                        :enemy-list )
+                      level-idx)]
       (c/next-game-state game-state))))
 
 

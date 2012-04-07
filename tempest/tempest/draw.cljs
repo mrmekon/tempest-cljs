@@ -99,6 +99,7 @@ level functions to draw complete game entities using the primitives.
   [context dims level player]
   (doseq []
     (.beginPath context)
+    (set! (. context -strokeStyle) (str "rgb(255,255,0)"))
     (draw-path context
                (path/polar-to-cartesian-centered
                 (path/polar-entity-coord player)
@@ -111,19 +112,23 @@ level functions to draw complete game entities using the primitives.
   "Draws all the entities, defined by paths in 'entity-list', on the 2D context
    of an HTML5 canvas, with :height and :width specified in dims, and on the
    given level."
-  [context dims level entity-list]
-  (doseq [entity entity-list]
-    (.beginPath context)
-    (draw-path-rotated context
-               (path/polar-to-cartesian-centered
-                (path/polar-entity-coord entity)
-                dims)
-               (path/round-path ((:path-fn entity) entity))
-               true
-               (:flip-point entity)
-               (:flip-cur-angle entity))
-    (.closePath context)))
-
+  [context dims level entity-list color]
+  (let [{r :r g :g b :b} color
+        color-str (str "rgb(" r "," g "," b ")")]
+    (doseq [entity entity-list]
+      (.beginPath context)
+      (.log js/console color-str)
+      (set! (. context -strokeStyle) color-str)
+      (draw-path-rotated context
+                         (path/polar-to-cartesian-centered
+                          (path/polar-entity-coord entity)
+                          dims)
+                         (path/round-path ((:path-fn entity) entity))
+                         true
+                         (:flip-point entity)
+                         (:flip-cur-angle entity))
+      (.closePath context))))
+  
 (defn draw-board
   "Draws a level on a 2D context of an HTML5 canvas with :height and :width
    specified in dims."
@@ -132,6 +137,7 @@ level functions to draw complete game entities using the primitives.
     (.save context)
     (.scale context zoom zoom)
     (.beginPath context)
+    (set! (. context -strokeStyle) (str "rgb(10,10,100)"))
     (doseq [idx (range (count (:segments level)))]
       (draw-rectangle
        context
