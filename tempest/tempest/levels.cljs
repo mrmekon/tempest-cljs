@@ -40,7 +40,7 @@ Functions related to generating paths representing levels.
 
 
 (def ^{:doc "Default length, in pixels, from origin to inner line."}
-  *default-line-length* 80)
+  *default-line-length* 20)
 
 (def ^{:doc "Default length function, returns argument*4"}
   *default-length-fn* #(* 4 %))
@@ -234,14 +234,17 @@ Functions related to generating paths representing levels.
 (def *level3_lines* (vec (flat-level 7 15 80)))
 
 ;; Oblong level, an open "W"
-(def *level4_lines* (vec (oblong-level [135 105 90 33] 15 80)))
+(def *level4_lines* (vec (oblong-level [135 105 90 33] 15 60)))
 
 ;; Oblong level, open "eagle wings"
-(def *level5_lines* (vec (oblong-level [135 100 90 90 90 85 80 75] 15 80)))
+(def *level5_lines* (vec (oblong-level [135 100 90 90 90 85 80 75] 15 60)))
 
 ;; Oblong level, a closed, spikey flower
 (def *level6_lines* (vec (oblong-level [135 45 90 135 45 90 135 45 90 135 45 90
                                         135 45 90 135 45 90 135 45 90 135 45] 15 80)))
+
+(def *level6_lines* (vec (oblong-level [135 45 90 135 45 90 135 45 90 135 45 90
+                                        135 45 90 135 45 90 135 45 90 135 45] 11 57)))
 
 (def *level7_lines* (vec (oblong-level [135 45 135 45] 15 3)))
 
@@ -252,11 +255,12 @@ Functions related to generating paths representing levels.
    vector of segments constructed of pairs of lines, and a length function.
    This function takes a vector of lines, and a boolean specifying whether
    the level is a closed loop, or open."
-  [lines loops? enemy-count enemy-probability]
+  [lines loops? enemy-count enemy-probability &
+   {:keys [length-fn] :or {length-fn *default-length-fn*}}]
   {:lines lines
    :loops? loops?
    :segments (build-segment-list (- (count lines) 1) loops?)
-   :length-fn *default-length-fn*
+   :length-fn length-fn
    :steps *default-steps-per-segment*
    :remaining enemy-count
    :probability enemy-probability})
@@ -267,7 +271,8 @@ Functions related to generating paths representing levels.
                       {:flipper 0.01})
     (make-level-entry *level2_lines* true
                       {:flipper 20}
-                      {:flipper 0.01})
+                      {:flipper 0.01}
+                      :length-fn #(* 9 %))
     (make-level-entry *level3_lines* false
                       {:flipper 20}
                       {:flipper 0.01})
