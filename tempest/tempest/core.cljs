@@ -59,6 +59,7 @@ after passing through all the other functions.  This implements the game loop.
        maybe-enemies-shoot
        maybe-make-enemy
        check-if-player-captured
+       update-player-if-shot
        check-if-enemies-remain
        update-entity-is-flipping
        update-entity-flippyness
@@ -636,6 +637,7 @@ flipper appears to flip 'inside' the level:
      (true? isdead?) (assoc global-state
                        :player (assoc player :is-dead? true)
                        :enemy-list '()
+                       :projectile-list '()
                        :is-zooming? true
                        :zoom-in? false)
      :else  (assoc global-state :player (update-entity-position! player)))))
@@ -939,6 +941,31 @@ The setTimeout fail-over is hard-coded to attempt 30fps.
         non-collided (mapcat projectile-list-without-collisions segment-lists)]
     (assoc game-state :projectile-list non-collided)))
 
+(defn bullets-will-kill-player?
+  "Returns true given bullet will hit the given player."
+  [player bullet]
+  (let [next-step (entity-next-step bullet)
+        player-step (:step player)]
+    (and (= player-step next-step)
+         (:from-enemy? bullet))))
+
+(defn update-player-if-shot
+  "Updates the player to indicate whether he was shot by an enemy."
+  [game-state]
+  (let [projectile-list (:projectile-list game-state)
+        player (:player game-state)
+        on-segment (filter #(= (:segment player) (:segment %)) projectile-list)
+        {hit true miss false} (group-by
+                               #(bullets-will-kill-player? player %)
+                               on-segment)]
+    (if-not (empty? hit)
+      (assoc game-state
+        :player (assoc player :is-dead? true)
+        :is-zooming? true
+        :enemy-list '()
+        :projectile-list '()
+        :zoom-in? false)
+      game-state)))
 
 (defn update-projectile-locations
   "Returns game-state with all projectiles updated to have new positions
