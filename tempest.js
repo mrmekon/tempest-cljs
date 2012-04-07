@@ -13545,11 +13545,11 @@ tempest.levels._STAR_level5_lines_STAR_ = cljs.core.vec.call(null, tempest.level
 tempest.levels._STAR_level6_lines_STAR_ = cljs.core.vec.call(null, tempest.levels.oblong_level.call(null, cljs.core.Vector.fromArray([135, 45, 90, 135, 45, 90, 135, 45, 90, 135, 45, 90, 135, 45, 90, 135, 45, 90, 135, 45, 90, 135, 45]), 15, 80));
 tempest.levels._STAR_level6_lines_STAR_ = cljs.core.vec.call(null, tempest.levels.oblong_level.call(null, cljs.core.Vector.fromArray([135, 45, 90, 135, 45, 90, 135, 45, 90, 135, 45, 90, 135, 45, 90, 135, 45, 90, 135, 45, 90, 135, 45]), 11, 57));
 tempest.levels._STAR_level7_lines_STAR_ = cljs.core.vec.call(null, tempest.levels.oblong_level.call(null, cljs.core.Vector.fromArray([135, 45, 135, 45]), 15, 3));
+tempest.levels._STAR_level8_lines_STAR_ = cljs.core.vec.call(null, tempest.levels.oblong_level.call(null, cljs.core.Vector.fromArray([135, 105, 90, 33]), 8, 10));
 tempest.levels.make_level_entry = function() {
   var a = function(a, b, e, f, g) {
-    g = cljs.core.truth_(cljs.core.seq_QMARK_.call(null, g)) ? cljs.core.apply.call(null, cljs.core.hash_map, g) : g;
-    g = cljs.core.get.call(null, g, "\ufdd0'length-fn", tempest.levels._STAR_default_length_fn_STAR_);
-    return cljs.core.ObjMap.fromObject("\ufdd0'lines,\ufdd0'loops?,\ufdd0'segments,\ufdd0'length-fn,\ufdd0'steps,\ufdd0'remaining,\ufdd0'probability".split(","), {"\ufdd0'lines":a, "\ufdd0'loops?":b, "\ufdd0'segments":tempest.levels.build_segment_list.call(null, cljs.core.count.call(null, a) - 1, b), "\ufdd0'length-fn":g, "\ufdd0'steps":tempest.levels._STAR_default_steps_per_segment_STAR_, "\ufdd0'remaining":e, "\ufdd0'probability":f})
+    var h = cljs.core.truth_(cljs.core.seq_QMARK_.call(null, g)) ? cljs.core.apply.call(null, cljs.core.hash_map, g) : g, g = cljs.core.get.call(null, h, "\ufdd0'steps", tempest.levels._STAR_default_steps_per_segment_STAR_), h = cljs.core.get.call(null, h, "\ufdd0'length-fn", tempest.levels._STAR_default_length_fn_STAR_);
+    return cljs.core.ObjMap.fromObject("\ufdd0'lines,\ufdd0'loops?,\ufdd0'segments,\ufdd0'length-fn,\ufdd0'steps,\ufdd0'remaining,\ufdd0'probability".split(","), {"\ufdd0'lines":a, "\ufdd0'loops?":b, "\ufdd0'segments":tempest.levels.build_segment_list.call(null, cljs.core.count.call(null, a) - 1, b), "\ufdd0'length-fn":h, "\ufdd0'steps":g, "\ufdd0'remaining":e, "\ufdd0'probability":f})
   }, b = function(b, d, e, f, g) {
     var h = null;
     goog.isDef(g) && (h = cljs.core.array_seq(Array.prototype.slice.call(arguments, 4), 0));
@@ -13567,7 +13567,9 @@ tempest.levels._STAR_levels_STAR_ = cljs.core.Vector.fromArray([tempest.levels.m
   return 9 * a
 }), tempest.levels.make_level_entry.call(null, tempest.levels._STAR_level3_lines_STAR_, !1, cljs.core.ObjMap.fromObject(["\ufdd0'flipper"], {"\ufdd0'flipper":20}), cljs.core.ObjMap.fromObject(["\ufdd0'flipper"], {"\ufdd0'flipper":0.01})), tempest.levels.make_level_entry.call(null, tempest.levels._STAR_level4_lines_STAR_, !1, cljs.core.ObjMap.fromObject(["\ufdd0'flipper"], {"\ufdd0'flipper":20}), cljs.core.ObjMap.fromObject(["\ufdd0'flipper"], {"\ufdd0'flipper":0.01})), tempest.levels.make_level_entry.call(null, 
 tempest.levels._STAR_level5_lines_STAR_, !1, cljs.core.ObjMap.fromObject(["\ufdd0'flipper"], {"\ufdd0'flipper":20}), cljs.core.ObjMap.fromObject(["\ufdd0'flipper"], {"\ufdd0'flipper":0.01})), tempest.levels.make_level_entry.call(null, tempest.levels._STAR_level6_lines_STAR_, !0, cljs.core.ObjMap.fromObject(["\ufdd0'flipper"], {"\ufdd0'flipper":20}), cljs.core.ObjMap.fromObject(["\ufdd0'flipper"], {"\ufdd0'flipper":0.01})), tempest.levels.make_level_entry.call(null, tempest.levels._STAR_level7_lines_STAR_, 
-!1, cljs.core.ObjMap.fromObject(["\ufdd0'flipper"], {"\ufdd0'flipper":20}), cljs.core.ObjMap.fromObject(["\ufdd0'flipper"], {"\ufdd0'flipper":0.01}))]);
+!1, cljs.core.ObjMap.fromObject(["\ufdd0'flipper"], {"\ufdd0'flipper":20}), cljs.core.ObjMap.fromObject(["\ufdd0'flipper"], {"\ufdd0'flipper":0.01})), tempest.levels.make_level_entry.call(null, tempest.levels._STAR_level8_lines_STAR_, !1, cljs.core.ObjMap.fromObject(["\ufdd0'flipper"], {"\ufdd0'flipper":20}), cljs.core.ObjMap.fromObject(["\ufdd0'flipper"], {"\ufdd0'flipper":0.01}), "\ufdd0'length-fn", function(a) {
+  return 10 * a
+}, "\ufdd0'steps", 400)]);
 tempest.path = {};
 tempest.path.add_sub = function(a, b) {
   return cljs.core.Vector.fromArray([cljs.core.first.call(null, b) + cljs.core.first.call(null, a), cljs.core.peek.call(null, b) - cljs.core.peek.call(null, a)])
@@ -13850,7 +13852,7 @@ tempest.draw.draw_entities = function(a, b, c, d, e) {
 };
 tempest.draw.draw_board = function(a, b, c, d) {
   a.save();
-  a.scale(d, d);
+  cljs.core.truth_(0 === d) ? a.scale(1.0E-5, 1.0E-4) : a.scale(d, d);
   a.beginPath();
   a.strokeStyle = cljs.core.str.call(null, "rgb(10,10,100)");
   var e = cljs.core.seq.call(null, cljs.core.range.call(null, cljs.core.count.call(null, "\ufdd0'segments".call(null, c))));
@@ -14030,7 +14032,7 @@ tempest.core.maybe_engage_flipping = function(a) {
         return b
       }
       b = cljs.core._EQ_.call(null, "\ufdd0'step".call(null, a), 150);
-      return cljs.core.truth_(b) ? b : cljs.core._EQ_.call(null, "\ufdd0'step".call(null, a), 200)
+      return cljs.core.truth_(b) ? b : cljs.core._EQ_.call(null, "\ufdd0'step".call(null, a), "\ufdd0'steps".call(null, "\ufdd0'level".call(null, a)))
     }(), cljs.core.truth_(b) ? cljs.core._EQ_.call(null, "\ufdd0'flip-dir".call(null, a), tempest.core.DirectionEnum.call(null, "NONE")) : b) : b
   }(), c = "\ufdd0'flip-permanent-dir".call(null, a), d = cljs.core.truth_(c) ? c : tempest.core.random_direction.call(null), e = tempest.core.segment_for_flip_direction.call(null, a, d), f = cljs.core._EQ_.call(null, d, tempest.core.DirectionEnum.call(null, "CW"));
   return cljs.core.truth_(!1 === b) ? a : cljs.core.truth_(cljs.core.not_EQ_.call(null, e, "\ufdd0'segment".call(null, a))) ? tempest.core.mark_flipper_for_flipping.call(null, a, d, e, f) : cljs.core.truth_(cljs.core.not.call(null, null === c)) ? tempest.core.swap_flipper_permanent_dir.call(null, a) : cljs.core.truth_("\ufdd0'else") ? a : null
