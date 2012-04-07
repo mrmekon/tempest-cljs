@@ -134,7 +134,10 @@ level functions to draw complete game entities using the primitives.
   [context dims level zoom]
   (doseq []
     (.save context)
-    (.scale context zoom zoom)
+    ;; To fix bug in Firefox.  scale to 0.0 breaks it.
+    (if (zero? zoom)
+      (.scale context 0.00001 0.0001)
+      (.scale context zoom zoom))
     (.beginPath context)
     (set! (. context -strokeStyle) (str "rgb(10,10,100)"))
     (doseq [idx (range (count (:segments level)))]
@@ -144,7 +147,8 @@ level functions to draw complete game entities using the primitives.
                          dims
                          (path/rectangle-for-segment level idx)))))
     (.closePath context)
-    (.restore context)))
+    (.restore context)
+    ))
 
 ;;  (path/round-path (map #(list (+ (- (:width dims) (* (:width dims) zoom)) (first %)) (peek %)) (path/rectangle-to-canvas-coords dims (path/rectangle-for-segment level idx)))))
 

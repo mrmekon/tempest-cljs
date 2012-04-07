@@ -249,6 +249,9 @@ Functions related to generating paths representing levels.
 (def *level7_lines* (vec (oblong-level [135 45 135 45] 15 3)))
 
 
+;; Oblong level, an open "W"
+(def *level8_lines* (vec (oblong-level [135 105 90 33] 8 10)))
+
 
 (defn make-level-entry 
   "Make a map that defines a level.  A level contains a vector of lines, a
@@ -256,12 +259,13 @@ Functions related to generating paths representing levels.
    This function takes a vector of lines, and a boolean specifying whether
    the level is a closed loop, or open."
   [lines loops? enemy-count enemy-probability &
-   {:keys [length-fn] :or {length-fn *default-length-fn*}}]
+   {:keys [length-fn steps] :or {length-fn *default-length-fn*
+                                 steps *default-steps-per-segment*}}]
   {:lines lines
    :loops? loops?
    :segments (build-segment-list (- (count lines) 1) loops?)
    :length-fn length-fn
-   :steps *default-steps-per-segment*
+   :steps steps
    :remaining enemy-count
    :probability enemy-probability})
 
@@ -287,6 +291,12 @@ Functions related to generating paths representing levels.
                       {:flipper 0.01})
     (make-level-entry *level7_lines* false
                       {:flipper 20}
-                      {:flipper 0.01})])
+                      {:flipper 0.01})
+    (make-level-entry *level8_lines* false
+                      {:flipper 20}
+                      {:flipper 0.01}
+                      :length-fn #(* 10 %)
+                      :steps 400)
+    ])
 
 

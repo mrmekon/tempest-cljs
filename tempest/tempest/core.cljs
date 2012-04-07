@@ -131,6 +131,8 @@ after passing through all the other functions.  This implements the game loop.
       :enemy-list '())))
 
 (defn maybe-change-level
+  "Reloads or moves to the next level if player is dead, or if all enemies are
+   dead."
   [game-state]
   (let [player (:player game-state)
         level (:level game-state)]
@@ -205,6 +207,8 @@ after passing through all the other functions.  This implements the game loop.
     ))
 
 (defn projectiles-after-shooting
+  "Returns a new list of active projectiles after randomly adding shots from
+   enemies."
   [enemy-list projectile-list]
   (loop [[enemy & enemies] enemy-list
          projectiles projectile-list]
@@ -216,6 +220,8 @@ after passing through all the other functions.  This implements the game loop.
           (recur enemies projectiles)))))
 
 (defn maybe-enemies-shoot
+  "Randomly adds new projectiles coming from enemies based on the enemies'
+   shoot-probability field.  See projectiles-after-shooting."
   [game-state]
   (let [enemies (:enemy-list game-state)
         projectiles (:projectile-list game-state)]
@@ -354,7 +360,7 @@ flipper appears to flip 'inside' the level:
                       (= (:step flipper) 50)
                       (= (:step flipper) 100)
                       (= (:step flipper) 150)
-                      (= (:step flipper) 200)
+                      (= (:step flipper) (:steps (:level flipper)))
                       )
                      (= (:flip-dir flipper) (DirectionEnum "NONE")))
         permanent-dir (:flip-permanent-dir flipper)
