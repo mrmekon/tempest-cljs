@@ -150,6 +150,7 @@ after passing through all the other functions.  This implements the game loop.
   {:step step
    :stride stride
    :segment seg-idx
+   :damage-segment seg-idx
    :level level
    :path-fn path/projectile-path-on-level
    :from-enemy? from-enemy?
@@ -208,7 +209,8 @@ after passing through all the other functions.  This implements the game loop.
          projectiles projectile-list]
     (if (nil? enemy) projectiles
         (if (and (<= (rand) (:shoot-probability enemy))
-                 (not= (:step enemy) (:steps (:level enemy))))
+                 (not= (:step enemy) (:steps (:level enemy)))
+                 (pos? (:stride enemy)))
           (recur enemies (add-enemy-projectile projectiles enemy))
           (recur enemies projectiles)))))
 
@@ -895,14 +897,48 @@ The setTimeout fail-over is hard-coded to attempt 30fps.
         :projectile-list plist
         :enemy-list elist))))
 
+(defn bullets-will-collide?
+  "Returns true if two bullets will collide within the next frame, and one is
+   from the player and the other is from an enemy."
+  [bullet1 bullet2]
+  (let [max-stride (max (:stride bullet1) (:stride bullet2))
+        min-stride (min (:stride bullet1) (:stride bullet2))
+        step1 (:step bullet1)
+        step2 (:step bullet2)
+        next-step1 (entity-next-step bullet1)
+        next-step2 (entity-next-step bullet2)]
+    (and (or (and (>= step1 step2) (<= next-step1 next-step2))
+             (and (>= step2 step1) (<= next-step2 next-step1)))
+         (neg? min-stride)
+         (pos? max-stride)
+         (if (:from-enemy? bullet1)
+           (not (:from-enemy? bullet2))
+           (:from-enemy? bullet2)))))
+           
+(defn projectile-list-without-collisions
+  "Given a list of projectiles, returns the list minus any bullet-on-bullet
+   collisions that occur within it."
+  [projectiles]
+  (loop [[bullet & others] projectiles
+         survivors '()]
+    (if (nil? bullet) survivors
+        (let [{not-hit false hit true}
+              (group-by #(bullets-will-collide? bullet %) others)]
+          (if-not (empty? hit)
+            (recur (concat not-hit (rest hit)) survivors)
+            (recur others (cons bullet survivors)))))))
+
 (defn remove-collided-bullets
-  "TODO: remove bullets that hit each other"
+  "Remove bullets that have hit each other.  Only player-vs-enemy collisions
+   count.  Breaks list of projectiles into one list per segment, and then
+   runs projectile-list-without-collisions on each of those lists to get
+   back a final list of only bullets that aren't involved in collisions."
   [game-state]
-  (let [projectile-list (:projectile-list game-state)]
-    ;; Gets a group of lists of projectils, where each group contains
-    ;; projectiles in the same spot.
-    (filter #(> (count %) 1) (vals (group-by #(select-keys % [:segment :step]) projectile-list)))
-    game-state))
+  (let [projectile-list (:projectile-list game-state)
+        segment-lists (vals (group-by :segment projectile-list))
+        non-collided (mapcat projectile-list-without-collisions segment-lists)]
+    (assoc game-state :projectile-list non-collided)))
+
 
 (defn update-projectile-locations
   "Returns game-state with all projectiles updated to have new positions
