@@ -53,8 +53,10 @@ after passing through all the other functions.  This implements the game loop.
        draw-board
        render-frame
        remove-collided-entities
+       remove-collided-bullets
        update-projectile-locations
        update-enemy-locations
+       maybe-enemies-shoot
        maybe-make-enemy
        check-if-player-captured
        check-if-enemies-remain
@@ -65,7 +67,8 @@ after passing through all the other functions.  This implements the game loop.
        maybe-render-fps-display
        schedule-next-frame
        ))
-  
+
+
 (defn game-logic-non-playable
   "Called by next-game-state for non-playable animations."
   [game-state]
@@ -142,12 +145,14 @@ after passing through all the other functions.  This implements the game loop.
   "Returns a dictionary describing a projectile (bullet) on the given level,
    in the given segment, with a given stride (steps per update to move, with
    negative meaning in and positive meaning out), and given step to start on."
-  [level seg-idx stride & {:keys [step] :or {step 0}}]
+  [level seg-idx stride & {:keys [step from-enemy?]
+                           :or {step 0 from-enemy? false}}]
   {:step step
    :stride stride
    :segment seg-idx
    :level level
    :path-fn path/projectile-path-on-level
+   :from-enemy? from-enemy?
    })
 
 (def ^{:doc "Enumeration of directions a flipper can be flipping."}
@@ -177,6 +182,7 @@ after passing through all the other functions.  This implements the game loop.
    :flip-max-angle 0
    :flip-cur-angle 0
    :can-flip false
+   :shoot-probability 0
    })
 
 (defn build-flipper
@@ -193,7 +199,25 @@ after passing through all the other functions.  This implements the game loop.
     :flip-cur-angle 0
     :flip-permanent-dir nil
     :can-flip true
+    :shoot-probability 0.005
     ))
+
+(defn projectiles-after-shooting
+  [enemy-list projectile-list]
+  (loop [[enemy & enemies] enemy-list
+         projectiles projectile-list]
+    (if (nil? enemy) projectiles
+        (if (and (<= (rand) (:shoot-probability enemy))
+                 (not= (:step enemy) (:steps (:level enemy))))
+          (recur enemies (add-enemy-projectile projectiles enemy))
+          (recur enemies projectiles)))))
+
+(defn maybe-enemies-shoot
+  [game-state]
+  (let [enemies (:enemy-list game-state)
+        projectiles (:projectile-list game-state)]
+  (assoc game-state
+    :projectile-list (projectiles-after-shooting enemies projectiles))))
 
 (defn maybe-make-enemy
   "Randomly create new enemies if the level needs more.  Each level has a total
@@ -518,7 +542,7 @@ flipper appears to flip 'inside' the level:
                          (:step bullet)
                          (entity-next-step bullet)
                          entity)]
-         (if collision?
+         (if (and (not (:from-enemy? bullet)) collision?)
            (recur (decrement-enemy-hits entity)
                   nil
                   (concat projectiles-out (rest projectiles-in))
@@ -678,6 +702,17 @@ flipper appears to flip 'inside' the level:
    (>= (:step projectile) (:steps (:level projectile))) true
    :else false))
 
+(defn add-enemy-projectile
+  "Add a new projectile to the global list of live projectiles, originating
+   from the given enemy, on the segment he is currently on."
+  [projectile-list enemy]
+  (let [level (:level enemy)
+        seg-idx (:segment enemy)
+        stride (+ (:stride enemy) 2)
+        step (:step enemy)]
+    (conj projectile-list
+          (build-projectile level seg-idx stride :step step :from-enemy? true))))
+
 (defn add-player-projectile
   "Add a new projectile to the global list of live projectiles, originating
    from the given player, on the segment he is currently on."
@@ -833,11 +868,18 @@ The setTimeout fail-over is hard-coded to attempt 30fps.
          enemy-list :enemy-list
          projectile-list :projectile-list
          player :player}
-        game-state]
+        game-state
+        {enemy-shots true player-shots false}
+        (group-by :from-enemy? projectile-list)]
     (if (not (:is-dead? player))
       (draw/draw-player context dims level player))
     (draw/draw-entities context dims level enemy-list {:r 150 :g 10 :b 10})
-    (draw/draw-entities context dims level projectile-list {:r 255 :g 255 :b 255})
+    (draw/draw-entities context dims level
+                        player-shots
+                        {:r 255 :g 255 :b 255})
+    (draw/draw-entities context dims level
+                        enemy-shots
+                        {:r 150 :g 15 :b 150})
     game-state))
 
 (defn remove-collided-entities
@@ -852,6 +894,15 @@ The setTimeout fail-over is hard-coded to attempt 30fps.
       (assoc game-state
         :projectile-list plist
         :enemy-list elist))))
+
+(defn remove-collided-bullets
+  "TODO: remove bullets that hit each other"
+  [game-state]
+  (let [projectile-list (:projectile-list game-state)]
+    ;; Gets a group of lists of projectils, where each group contains
+    ;; projectiles in the same spot.
+    (filter #(> (count %) 1) (vals (group-by #(select-keys % [:segment :step]) projectile-list)))
+    game-state))
 
 (defn update-projectile-locations
   "Returns game-state with all projectiles updated to have new positions
