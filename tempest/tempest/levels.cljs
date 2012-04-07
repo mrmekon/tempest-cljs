@@ -263,7 +263,7 @@ Functions related to generating paths representing levels.
 
 (def *levels*
   [ (make-level-entry *level1_lines* false
-                      {:flipper 20}
+                      {:flipper 5}
                       {:flipper 0.01})
     (make-level-entry *level2_lines* true
                       {:flipper 20}

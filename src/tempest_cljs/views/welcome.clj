@@ -11,10 +11,10 @@
 (defpage "/tempest/:level" {:keys [level]}
   (common/site-layout
    (include-js "/tempest.js")
-   [:canvas#canv-bg {:width "900" :height "900"
+   [:canvas#canv-bg {:width "1000" :height "900"
                      :style (str "position: absolute; z-index: 0;"
                                  "background-color: #000000;")}]
-   [:canvas#canv-fg {:width "900" :height "900"
+   [:canvas#canv-fg {:width "1000" :height "900"
                      :style (str "position: absolute; z-index: 1;")}]
    [:p#fps "FPS 0.0"]
    (javascript-tag (str "tempest.canvasDraw(" (pr-str level) ");"))

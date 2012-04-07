@@ -117,7 +117,6 @@ level functions to draw complete game entities using the primitives.
         color-str (str "rgb(" r "," g "," b ")")]
     (doseq [entity entity-list]
       (.beginPath context)
-      (.log js/console color-str)
       (set! (. context -strokeStyle) color-str)
       (draw-path-rotated context
                          (path/polar-to-cartesian-centered

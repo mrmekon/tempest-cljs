@@ -15,5 +15,5 @@
   (html5
    [:head
     [:title "Tempest in ClojureScript"]]
-   [:body
+   [:body {:style "background-color: #000000;"}
     [:div#wrapper content]]))

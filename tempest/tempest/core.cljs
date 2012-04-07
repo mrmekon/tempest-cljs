@@ -48,6 +48,7 @@ after passing through all the other functions.  This implements the game loop.
   [game-state]
   (->> game-state
        dequeue-keypresses
+       maybe-change-level
        clear-frame
        draw-board
        render-frame
@@ -56,6 +57,7 @@ after passing through all the other functions.  This implements the game loop.
        update-enemy-locations
        maybe-make-enemy
        check-if-player-captured
+       check-if-enemies-remain
        update-entity-is-flipping
        update-entity-flippyness
        animate-player-capture
@@ -95,7 +97,19 @@ after passing through all the other functions.  This implements the game loop.
    :is-zooming? true
    :zoom-in? true
    :zoom 0.0
+   :level-done? false
    })
+
+(defn check-if-enemies-remain
+  [game-state]
+  (let [level (:level game-state)
+        player (:player game-state)
+        on-board (count (:enemy-list game-state))
+        unlaunched (apply + (vals (:remaining level)))
+        remaining (+ on-board unlaunched)]
+    (if (zero? remaining)
+      (assoc game-state :is-zooming? true :zoom-in? false)
+      game-state)))
 
 (defn change-level
   "Changes current level of game."
@@ -104,7 +118,25 @@ after passing through all the other functions.  This implements the game loop.
     (assoc game-state
       :level-idx level-idx
       :level level
-      :player (build-player level 0))))
+      :player (build-player level 0)
+      :zoom 0.0
+      :zoom-in? true
+      :is-zooming? true
+      :level-done? false
+      :projectile-list '()
+      :enemy-list '())))
+
+(defn maybe-change-level
+  [game-state]
+  (let [player (:player game-state)
+        level (:level game-state)]
+    (cond
+     (and (:is-dead? player) (:level-done? game-state))
+     (change-level game-state (:level-idx game-state))
+     (and (not (:is-dead? player)) (:level-done? game-state))
+     (change-level game-state (inc (:level-idx game-state)))
+     :else game-state)))
+             
 
 (defn build-projectile
   "Returns a dictionary describing a projectile (bullet) on the given level,
@@ -585,7 +617,8 @@ flipper appears to flip 'inside' the level:
 (defn update-zoom
   "Updates current zoom value of the level, based on direction of :zoom-in?
    in the global-state.  This is used to animate the board zooming in or
-   zooming out at the start or end of a round."
+   zooming out at the start or end of a round.  If this was a zoom out, and
+   it's finished, mark the level as done so it can restart."
   [global-state]
   (let [zoom (:zoom global-state)
         zoom-in? (:zoom-in? global-state)
@@ -593,7 +626,9 @@ flipper appears to flip 'inside' the level:
         newzoom (if zoom-in? (+ zoom zoom-step) (- zoom zoom-step))
         target (if zoom-in? 1.0 0.0)
         cmp (if zoom-in? >= <=)]
-    (if (cmp zoom target) (assoc global-state :is-zooming? false)
+    (if (cmp zoom target) (assoc global-state
+                            :is-zooming? false
+                            :level-done? (not zoom-in?))
         (if (cmp newzoom target)
           (assoc global-state :zoom target)
           (assoc global-state :zoom newzoom)))))
