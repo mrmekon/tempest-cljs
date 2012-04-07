@@ -13546,6 +13546,9 @@ tempest.levels._STAR_level6_lines_STAR_ = cljs.core.vec.call(null, tempest.level
 tempest.levels._STAR_level6_lines_STAR_ = cljs.core.vec.call(null, tempest.levels.oblong_level.call(null, cljs.core.Vector.fromArray([135, 45, 90, 135, 45, 90, 135, 45, 90, 135, 45, 90, 135, 45, 90, 135, 45, 90, 135, 45, 90, 135, 45]), 11, 57));
 tempest.levels._STAR_level7_lines_STAR_ = cljs.core.vec.call(null, tempest.levels.oblong_level.call(null, cljs.core.Vector.fromArray([135, 45, 135, 45]), 15, 3));
 tempest.levels._STAR_level8_lines_STAR_ = cljs.core.vec.call(null, tempest.levels.oblong_level.call(null, cljs.core.Vector.fromArray([135, 105, 90, 33]), 8, 10));
+tempest.levels._STAR_level9_lines_STAR_ = cljs.core.vec.call(null, tempest.levels.oblong_level.call(null, cljs.core.Vector.fromArray([50, 50, 60, 60, 70]), 15, 60));
+tempest.levels._STAR_level10_lines_STAR_ = cljs.core.Vector.fromArray([cljs.core.Vector.fromArray([38, 203]), cljs.core.Vector.fromArray([43, 217]), cljs.core.Vector.fromArray([34, 229]), cljs.core.Vector.fromArray([44, 239]), cljs.core.Vector.fromArray([39, 255]), cljs.core.Vector.fromArray([50, 262]), cljs.core.Vector.fromArray([50, 278]), cljs.core.Vector.fromArray([39, 284]), cljs.core.Vector.fromArray([44, 300]), cljs.core.Vector.fromArray([34, 310]), cljs.core.Vector.fromArray([43, 322]), cljs.core.Vector.fromArray([38, 
+336])]);
 tempest.levels.make_level_entry = function() {
   var a = function(a, b, e, f, g) {
     var h = cljs.core.truth_(cljs.core.seq_QMARK_.call(null, g)) ? cljs.core.apply.call(null, cljs.core.hash_map, g) : g, g = cljs.core.get.call(null, h, "\ufdd0'steps", tempest.levels._STAR_default_steps_per_segment_STAR_), h = cljs.core.get.call(null, h, "\ufdd0'length-fn", tempest.levels._STAR_default_length_fn_STAR_);
@@ -13569,7 +13572,7 @@ tempest.levels._STAR_levels_STAR_ = cljs.core.Vector.fromArray([tempest.levels.m
 tempest.levels._STAR_level5_lines_STAR_, !1, cljs.core.ObjMap.fromObject(["\ufdd0'flipper"], {"\ufdd0'flipper":20}), cljs.core.ObjMap.fromObject(["\ufdd0'flipper"], {"\ufdd0'flipper":0.01})), tempest.levels.make_level_entry.call(null, tempest.levels._STAR_level6_lines_STAR_, !0, cljs.core.ObjMap.fromObject(["\ufdd0'flipper"], {"\ufdd0'flipper":20}), cljs.core.ObjMap.fromObject(["\ufdd0'flipper"], {"\ufdd0'flipper":0.01})), tempest.levels.make_level_entry.call(null, tempest.levels._STAR_level7_lines_STAR_, 
 !1, cljs.core.ObjMap.fromObject(["\ufdd0'flipper"], {"\ufdd0'flipper":20}), cljs.core.ObjMap.fromObject(["\ufdd0'flipper"], {"\ufdd0'flipper":0.01})), tempest.levels.make_level_entry.call(null, tempest.levels._STAR_level8_lines_STAR_, !1, cljs.core.ObjMap.fromObject(["\ufdd0'flipper"], {"\ufdd0'flipper":20}), cljs.core.ObjMap.fromObject(["\ufdd0'flipper"], {"\ufdd0'flipper":0.01}), "\ufdd0'length-fn", function(a) {
   return 10 * a
-}, "\ufdd0'steps", 400)]);
+}, "\ufdd0'steps", 400), tempest.levels.make_level_entry.call(null, tempest.levels._STAR_level9_lines_STAR_, !1, cljs.core.ObjMap.fromObject(["\ufdd0'flipper"], {"\ufdd0'flipper":20}), cljs.core.ObjMap.fromObject(["\ufdd0'flipper"], {"\ufdd0'flipper":0.01})), tempest.levels.make_level_entry.call(null, tempest.levels._STAR_level10_lines_STAR_, !1, cljs.core.ObjMap.fromObject(["\ufdd0'flipper"], {"\ufdd0'flipper":20}), cljs.core.ObjMap.fromObject(["\ufdd0'flipper"], {"\ufdd0'flipper":0.01}))]);
 tempest.path = {};
 tempest.path.add_sub = function(a, b) {
   return cljs.core.Vector.fromArray([cljs.core.first.call(null, b) + cljs.core.first.call(null, a), cljs.core.peek.call(null, b) - cljs.core.peek.call(null, a)])
@@ -13730,9 +13733,17 @@ tempest.path.flipper_path_on_level = function(a) {
   tempest.path.polar_entity_coord.call(null, a);
   return tempest.path.rotate_path.call(null, tempest.path.enemy_angle.call(null, a), tempest.path.flipper_path_with_width.call(null, 0.8 * tempest.path.entity_desired_width.call(null, a)))
 };
+tempest.path.tanker_path_on_level = function(a) {
+  tempest.path.polar_entity_coord.call(null, a);
+  return tempest.path.rotate_path.call(null, tempest.path.enemy_angle.call(null, a), tempest.path.tanker_path_with_width.call(null, 0.8 * tempest.path.entity_desired_width.call(null, a)))
+};
 tempest.path.projectile_path_on_level = function(a) {
   tempest.path.polar_entity_coord.call(null, a);
   return tempest.path.rotate_path.call(null, tempest.path.enemy_angle.call(null, a), tempest.path.projectile_path_with_width.call(null, 0.3 * tempest.path.entity_desired_width.call(null, a)))
+};
+tempest.path.tanker_path_with_width = function(a) {
+  a /= Math.cos.call(null, tempest.util.deg_to_rad.call(null, 16));
+  return cljs.core.Vector.fromArray([cljs.core.Vector.fromArray([0, 0]), cljs.core.Vector.fromArray([a / 2, 16]), cljs.core.Vector.fromArray([a / 4, 214]), cljs.core.Vector.fromArray([a / 4, 326]), cljs.core.Vector.fromArray([a, 164]), cljs.core.Vector.fromArray([a / 4, 326]), cljs.core.Vector.fromArray([a / 4, 214]), cljs.core.Vector.fromArray([a / 2, 16])])
 };
 tempest.path.flipper_path_with_width = function(a) {
   a /= Math.cos.call(null, tempest.util.deg_to_rad.call(null, 16));
@@ -13850,23 +13861,38 @@ tempest.draw.draw_entities = function(a, b, c, d, e) {
     return null
   }
 };
-tempest.draw.draw_board = function(a, b, c, d) {
-  a.save();
-  cljs.core.truth_(0 === d) ? a.scale(1.0E-5, 1.0E-4) : a.scale(d, d);
-  a.beginPath();
-  a.strokeStyle = cljs.core.str.call(null, "rgb(10,10,100)");
-  var e = cljs.core.seq.call(null, cljs.core.range.call(null, cljs.core.count.call(null, "\ufdd0'segments".call(null, c))));
+tempest.draw.draw_player_segment = function(a, b) {
+  var c = cljs.core.truth_(cljs.core.seq_QMARK_.call(null, a)) ? cljs.core.apply.call(null, cljs.core.hash_map, a) : a;
+  cljs.core.get.call(null, c, "\ufdd0'player");
+  cljs.core.get.call(null, c, "\ufdd0'zoom");
+  var d = cljs.core.get.call(null, c, "\ufdd0'level"), e = cljs.core.get.call(null, c, "\ufdd0'dims"), f = cljs.core.get.call(null, c, "\ufdd0'bgcontext"), c = cljs.core.get.call(null, c, "\ufdd0'player"), c = cljs.core.truth_(cljs.core.seq_QMARK_.call(null, c)) ? cljs.core.apply.call(null, cljs.core.hash_map, c) : c, c = cljs.core.get.call(null, c, "\ufdd0'segment"), g = cljs.core.truth_(cljs.core.seq_QMARK_.call(null, b)) ? cljs.core.apply.call(null, cljs.core.hash_map, b) : b, h = cljs.core.get.call(null, 
+  g, "\ufdd0'b"), i = cljs.core.get.call(null, g, "\ufdd0'g"), g = cljs.core.get.call(null, g, "\ufdd0'r");
+  f.beginPath();
+  f.strokeStyle = cljs.core.str.call(null, "rgb(", g, ",", i, ",", h, ")");
+  tempest.draw.draw_rectangle.call(null, f, tempest.path.round_path.call(null, tempest.path.rectangle_to_canvas_coords.call(null, e, tempest.path.rectangle_for_segment.call(null, d, c))));
+  return f.closePath()
+};
+tempest.draw.draw_board = function(a) {
+  var b = cljs.core.truth_(cljs.core.seq_QMARK_.call(null, a)) ? cljs.core.apply.call(null, cljs.core.hash_map, a) : a;
+  cljs.core.get.call(null, b, "\ufdd0'player");
+  var c = cljs.core.get.call(null, b, "\ufdd0'zoom"), a = cljs.core.get.call(null, b, "\ufdd0'level"), d = cljs.core.get.call(null, b, "\ufdd0'dims"), b = cljs.core.get.call(null, b, "\ufdd0'bgcontext");
+  b.save();
+  cljs.core.truth_(0 === c) ? b.scale(1.0E-5, 1.0E-4) : b.scale(c, c);
+  b.lineWidth = 1;
+  b.strokeStyle = cljs.core.str.call(null, "rgb(10,10,100)");
+  b.beginPath();
+  var e = cljs.core.seq.call(null, cljs.core.range.call(null, cljs.core.count.call(null, "\ufdd0'segments".call(null, a))));
   if(cljs.core.truth_(e)) {
-    for(d = cljs.core.first.call(null, e);;) {
-      if(tempest.draw.draw_rectangle.call(null, a, tempest.path.round_path.call(null, tempest.path.rectangle_to_canvas_coords.call(null, b, tempest.path.rectangle_for_segment.call(null, c, d)))), d = cljs.core.next.call(null, e), cljs.core.truth_(d)) {
-        e = d, d = cljs.core.first.call(null, e)
+    for(c = cljs.core.first.call(null, e);;) {
+      if(tempest.draw.draw_rectangle.call(null, b, tempest.path.round_path.call(null, tempest.path.rectangle_to_canvas_coords.call(null, d, tempest.path.rectangle_for_segment.call(null, a, c)))), c = cljs.core.next.call(null, e), cljs.core.truth_(c)) {
+        e = c, c = cljs.core.first.call(null, e)
       }else {
         break
       }
     }
   }
-  a.closePath();
-  return a.restore()
+  b.restore();
+  return b.closePath()
 };
 tempest.draw.clear_context = function(a, b) {
   var c = cljs.core.truth_(cljs.core.seq_QMARK_.call(null, b)) ? cljs.core.apply.call(null, cljs.core.hash_map, b) : b, d = cljs.core.get.call(null, c, "\ufdd0'width"), c = cljs.core.get.call(null, c, "\ufdd0'height");
@@ -13880,7 +13906,7 @@ tempest.core.next_game_state = function(a) {
 };
 tempest.core.game_logic_playable = function(a) {
   return tempest.core.schedule_next_frame.call(null, tempest.core.maybe_render_fps_display.call(null, tempest.core.update_frame_count.call(null, tempest.core.animate_player_capture.call(null, tempest.core.update_entity_flippyness.call(null, tempest.core.update_entity_is_flipping.call(null, tempest.core.check_if_enemies_remain.call(null, tempest.core.update_player_if_shot.call(null, tempest.core.check_if_player_captured.call(null, tempest.core.maybe_make_enemy.call(null, tempest.core.maybe_enemies_shoot.call(null, 
-  tempest.core.update_enemy_locations.call(null, tempest.core.update_projectile_locations.call(null, tempest.core.remove_collided_bullets.call(null, tempest.core.remove_collided_entities.call(null, tempest.core.render_frame.call(null, tempest.core.draw_board.call(null, tempest.core.clear_frame.call(null, tempest.core.maybe_change_level.call(null, tempest.core.dequeue_keypresses.call(null, a))))))))))))))))))))
+  tempest.core.update_enemy_locations.call(null, tempest.core.update_projectile_locations.call(null, tempest.core.remove_collided_bullets.call(null, tempest.core.remove_collided_entities.call(null, tempest.core.render_frame.call(null, tempest.core.draw_board.call(null, tempest.core.clear_frame.call(null, tempest.core.maybe_change_level.call(null, tempest.core.highlight_player_segment.call(null, tempest.core.dequeue_keypresses.call(null, tempest.core.clear_player_segment.call(null, a))))))))))))))))))))))
 };
 tempest.core.game_logic_non_playable = function(a) {
   return tempest.core.schedule_next_frame.call(null, tempest.core.maybe_render_fps_display.call(null, tempest.core.update_frame_count.call(null, tempest.core.render_frame.call(null, tempest.core.draw_board.call(null, tempest.core.clear_frame.call(null, a))))))
@@ -13927,6 +13953,7 @@ tempest.core.build_projectile = function() {
   return b
 }();
 tempest.core.DirectionEnum = cljs.core.ObjMap.fromObject(["NONE", "CW", "CCW"], {NONE:0, CW:1, CCW:2});
+tempest.core.EnemyEnum = cljs.core.ObjMap.fromObject("NONE,FLIPPER,TANKER,SPIKER,FUSEBALL,PULSAR".split(","), {NONE:0, FLIPPER:1, TANKER:2, SPIKER:3, FUSEBALL:4, PULSAR:5});
 tempest.core.direction_string_from_value = function() {
   return cljs.core.first.call(null, cljs.core.first.call(null, cljs.core.filter.call(null, function(a) {
     return cljs.core._EQ_.call(null, 1, cljs.core.peek.call(null, a))
@@ -13936,11 +13963,27 @@ tempest.core.build_enemy = function() {
   var a = function(a, b, e) {
     e = cljs.core.truth_(cljs.core.seq_QMARK_.call(null, e)) ? cljs.core.apply.call(null, cljs.core.hash_map, e) : e;
     e = cljs.core.get.call(null, e, "\ufdd0'step", 0);
-    return cljs.core.ObjMap.fromObject("\ufdd0'flip-dir,\ufdd0'hits-remaining,\ufdd0'bounding-fn,\ufdd0'flip-point,\ufdd0'stride,\ufdd0'segment,\ufdd0'damage-segment,\ufdd0'shoot-probability,\ufdd0'flip-stride,\ufdd0'level,\ufdd0'step,\ufdd0'flip-max-angle,\ufdd0'can-flip,\ufdd0'flip-cur-angle,\ufdd0'path-fn".split(","), {"\ufdd0'flip-dir":tempest.core.DirectionEnum.call(null, "NONE"), "\ufdd0'hits-remaining":1, "\ufdd0'bounding-fn":function() {
-      return cljs.core.identity.call(null, 0)
-    }, "\ufdd0'flip-point":cljs.core.Vector.fromArray([0, 0]), "\ufdd0'stride":1, "\ufdd0'segment":b, "\ufdd0'damage-segment":b, "\ufdd0'shoot-probability":0, "\ufdd0'flip-stride":1, "\ufdd0'level":a, "\ufdd0'step":e, "\ufdd0'flip-max-angle":0, "\ufdd0'can-flip":!1, "\ufdd0'flip-cur-angle":0, "\ufdd0'path-fn":function() {
+    return cljs.core.ObjMap.fromObject("\ufdd0'flip-dir,\ufdd0'hits-remaining,\ufdd0'flip-point,\ufdd0'stride,\ufdd0'segment,\ufdd0'damage-segment,\ufdd0'shoot-probability,\ufdd0'type,\ufdd0'flip-stride,\ufdd0'level,\ufdd0'step,\ufdd0'flip-max-angle,\ufdd0'can-flip,\ufdd0'flip-cur-angle,\ufdd0'path-fn".split(","), {"\ufdd0'flip-dir":tempest.core.DirectionEnum.call(null, "NONE"), "\ufdd0'hits-remaining":1, "\ufdd0'flip-point":cljs.core.Vector.fromArray([0, 0]), "\ufdd0'stride":1, "\ufdd0'segment":b, 
+    "\ufdd0'damage-segment":b, "\ufdd0'shoot-probability":0, "\ufdd0'type":tempest.core.EnemyEnum.call(null, "NONE"), "\ufdd0'flip-stride":1, "\ufdd0'level":a, "\ufdd0'step":e, "\ufdd0'flip-max-angle":0, "\ufdd0'can-flip":!1, "\ufdd0'flip-cur-angle":0, "\ufdd0'path-fn":function() {
       return cljs.core.Vector.fromArray([]).call(null)
     }})
+  }, b = function(b, d, e) {
+    var f = null;
+    goog.isDef(e) && (f = cljs.core.array_seq(Array.prototype.slice.call(arguments, 2), 0));
+    return a.call(this, b, d, f)
+  };
+  b.cljs$lang$maxFixedArity = 2;
+  b.cljs$lang$applyTo = function(b) {
+    var d = cljs.core.first(b), e = cljs.core.first(cljs.core.next(b)), b = cljs.core.rest(cljs.core.next(b));
+    return a.call(this, d, e, b)
+  };
+  return b
+}();
+tempest.core.build_tanker = function() {
+  var a = function(a, b, e) {
+    e = cljs.core.truth_(cljs.core.seq_QMARK_.call(null, e)) ? cljs.core.apply.call(null, cljs.core.hash_map, e) : e;
+    e = cljs.core.get.call(null, e, "\ufdd0'step", 0);
+    return cljs.core.assoc.call(null, tempest.core.build_enemy.call(null, a, b, "\ufdd0'step", e), "\ufdd0'type", tempest.core.EnemyEnum.call(null, "TANKER"), "\ufdd0'path-fn", tempest.path.tanker_path_on_level, "\ufdd0'can-flip", !1, "\ufdd0'stride", 0.2, "\ufdd0'shoot-probability", 0)
   }, b = function(b, d, e) {
     var f = null;
     goog.isDef(e) && (f = cljs.core.array_seq(Array.prototype.slice.call(arguments, 2), 0));
@@ -13957,7 +14000,7 @@ tempest.core.build_flipper = function() {
   var a = function(a, b, e) {
     e = cljs.core.truth_(cljs.core.seq_QMARK_.call(null, e)) ? cljs.core.apply.call(null, cljs.core.hash_map, e) : e;
     e = cljs.core.get.call(null, e, "\ufdd0'step", 0);
-    return cljs.core.assoc.call(null, tempest.core.build_enemy.call(null, a, b, "\ufdd0'step", e), "\ufdd0'bounding-fn", tempest.path.flipper_path_bounding_box, "\ufdd0'path-fn", tempest.path.flipper_path_on_level, "\ufdd0'flip-dir", tempest.core.DirectionEnum.call(null, "NONE"), "\ufdd0'flip-point", cljs.core.Vector.fromArray([0, 0]), "\ufdd0'flip-stride", 1, "\ufdd0'flip-step-count", 20, "\ufdd0'flip-max-angle", 0, "\ufdd0'flip-cur-angle", 0, "\ufdd0'flip-permanent-dir", null, "\ufdd0'can-flip", 
+    return cljs.core.assoc.call(null, tempest.core.build_enemy.call(null, a, b, "\ufdd0'step", e), "\ufdd0'type", tempest.core.EnemyEnum.call(null, "FLIPPER"), "\ufdd0'path-fn", tempest.path.flipper_path_on_level, "\ufdd0'flip-dir", tempest.core.DirectionEnum.call(null, "NONE"), "\ufdd0'flip-point", cljs.core.Vector.fromArray([0, 0]), "\ufdd0'flip-stride", 1, "\ufdd0'flip-step-count", 20, "\ufdd0'flip-max-angle", 0, "\ufdd0'flip-cur-angle", 0, "\ufdd0'flip-permanent-dir", null, "\ufdd0'can-flip", 
     !0, "\ufdd0'shoot-probability", 0.0050)
   }, b = function(b, d, e) {
     var f = null;
@@ -14159,9 +14202,21 @@ tempest.core.update_zoom = function(a) {
   var b = "\ufdd0'zoom".call(null, a), c = "\ufdd0'zoom-in?".call(null, a), d = cljs.core.truth_(c) ? b + 0.04 : b - 0.04, e = cljs.core.truth_(c) ? 1 : 0, f = cljs.core.truth_(c) ? cljs.core._GT__EQ_ : cljs.core._LT__EQ_;
   return cljs.core.truth_(f.call(null, b, e)) ? cljs.core.assoc.call(null, a, "\ufdd0'is-zooming?", !1, "\ufdd0'level-done?", cljs.core.not.call(null, c)) : cljs.core.truth_(f.call(null, d, e)) ? cljs.core.assoc.call(null, a, "\ufdd0'zoom", e) : cljs.core.assoc.call(null, a, "\ufdd0'zoom", d)
 };
+tempest.core.clear_player_segment = function(a) {
+  "\ufdd0'bgcontext".call(null, a).lineWidth = 2;
+  tempest.draw.draw_player_segment.call(null, a, cljs.core.ObjMap.fromObject(["\ufdd0'r", "\ufdd0'g", "\ufdd0'b"], {"\ufdd0'r":0, "\ufdd0'g":0, "\ufdd0'b":0}));
+  "\ufdd0'bgcontext".call(null, a).lineWidth = 1.5;
+  tempest.draw.draw_player_segment.call(null, a, cljs.core.ObjMap.fromObject(["\ufdd0'r", "\ufdd0'g", "\ufdd0'b"], {"\ufdd0'r":10, "\ufdd0'g":10, "\ufdd0'b":100}));
+  return a
+};
+tempest.core.highlight_player_segment = function(a) {
+  "\ufdd0'bgcontext".call(null, a).lineWidth = 1;
+  tempest.draw.draw_player_segment.call(null, a, cljs.core.ObjMap.fromObject(["\ufdd0'r", "\ufdd0'g", "\ufdd0'b"], {"\ufdd0'r":150, "\ufdd0'g":150, "\ufdd0'b":15}));
+  return a
+};
 tempest.core.draw_board = function(a) {
   var b = "\ufdd0'is-zooming?".call(null, a), c = "\ufdd0'zoom".call(null, a), d = "\ufdd0'dims".call(null, a), e = cljs.core.truth_(cljs.core.seq_QMARK_.call(null, d)) ? cljs.core.apply.call(null, cljs.core.hash_map, d) : d, d = cljs.core.get.call(null, e, "\ufdd0'width"), e = cljs.core.get.call(null, e, "\ufdd0'height");
-  return cljs.core.truth_(b) ? (tempest.draw.clear_context.call(null, "\ufdd0'bgcontext".call(null, a), "\ufdd0'dims".call(null, a)), tempest.draw.draw_board.call(null, "\ufdd0'bgcontext".call(null, a), cljs.core.ObjMap.fromObject(["\ufdd0'width", "\ufdd0'height"], {"\ufdd0'width":d / c, "\ufdd0'height":e / c}), "\ufdd0'level".call(null, a), c), tempest.core.update_zoom.call(null, a)) : a
+  return cljs.core.truth_(b) ? (tempest.draw.clear_context.call(null, "\ufdd0'bgcontext".call(null, a), "\ufdd0'dims".call(null, a)), tempest.draw.draw_board.call(null, cljs.core.assoc.call(null, a, "\ufdd0'dims", cljs.core.ObjMap.fromObject(["\ufdd0'width", "\ufdd0'height"], {"\ufdd0'width":d / c, "\ufdd0'height":e / c}))), tempest.core.update_zoom.call(null, a)) : a
 };
 tempest.core.collisions_with_projectile = function(a, b) {
   return cljs.core.group_by.call(null, cljs.core.partial.call(null, tempest.core.entity_between_steps, "\ufdd0'segment".call(null, b), "\ufdd0'step".call(null, b), tempest.core.entity_next_step.call(null, b)), a)
