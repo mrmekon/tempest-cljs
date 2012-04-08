@@ -41,24 +41,16 @@ Publicly exported functions to embed Tempest game in HTML.
 ;;
 ;; ## TODO:
 ;;
-;;   * Flippers should.. flip.
-;;   * Player should be sucked down the level if a flipper touches him
 ;;   * MOAR ENEMIES
 ;;   * Jump?  Is that possible with this design?  I think so, easily, by
 ;;     scaling just the first, undrawn line of player.  It ends up being
 ;;     normal to the segment's top line.
 ;;   * Power ups.  Bonus points if they're crazy swirly particle things.
-;;   * Board colors.  Blue on black is the classic.
-;;   * Current segment highlight color
 ;;   * Browser + keyboard input stuff
-;;     - Find appropriate size for canvas.  Maybe there's a way to make it
-;;       "full screen"
-;;     - Don't let spacebar scroll the screen, or use a different key
 ;;     - Any way to change repeat rate?  Probably not
 ;;     - Any way to use the mouse?
 ;;     - I'm not above making a custom rotary controller.
 ;;     - Two keys at the same time?  Gotta swirl-n-shoot.
-;;   * Offset flat levels up more, instead of displaying them at the bottom.
 ;;   * Rate-limit bullets
 ;;   * Frame timing, and disassociate movement speed from framerate.
 ;;
