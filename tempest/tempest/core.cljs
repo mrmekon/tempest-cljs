@@ -193,6 +193,7 @@ after passing through all the other functions.  This implements the game loop.
    :flip-stride 1
    :flip-max-angle 0
    :flip-cur-angle 0
+   :flip-probability 0
    :can-flip false
    :shoot-probability 0
    :type (EnemyEnum "NONE")
@@ -222,8 +223,9 @@ after passing through all the other functions.  This implements the game loop.
     :flip-max-angle 0
     :flip-cur-angle 0
     :flip-permanent-dir nil
+    :flip-probability 0.015
     :can-flip true
-    :shoot-probability 0.005
+    :shoot-probability 0.004
     ))
 
 (defn projectiles-after-shooting
@@ -378,13 +380,9 @@ flipper appears to flip 'inside' the level:
   [flipper]
   (let [should-flip (and
                      (true? (:can-flip flipper))
-                     (or
-                      (= (:step flipper) 50)
-                      (= (:step flipper) 100)
-                      (= (:step flipper) 150)
-                      (= (:step flipper) (:steps (:level flipper)))
-                      )
-                     (= (:flip-dir flipper) (DirectionEnum "NONE")))
+                     (= (:flip-dir flipper) (DirectionEnum "NONE"))
+                     (or (<= (rand) (:flip-probability flipper))
+                         (= (:step flipper) (:steps (:level flipper)))))
         permanent-dir (:flip-permanent-dir flipper)
         flip-dir (or permanent-dir (random-direction))
         flip-seg-idx (segment-for-flip-direction flipper flip-dir)
@@ -540,7 +538,9 @@ flipper appears to flip 'inside' the level:
 (defn projectiles-after-collision
   "Given an entity and a list of projectiles, returns the entity and updated
    list of projectiles after collisions.  The entity's hits-remaining counter
-   is decremented on a collision, and the projectile is removed."
+   is decremented on a collision, and the projectile is removed.  Small amount
+   of fudge factor (1 step += actual projectile location) to avoid narrow
+   misses in the collision algorithm."
   [entity projectile-list]
   ((fn [entity projectiles-in projectiles-out was-hit?]
      (if (empty? projectiles-in)
@@ -548,8 +548,8 @@ flipper appears to flip 'inside' the level:
        (let [bullet (first projectiles-in)
              collision? (entity-between-steps
                          (:segment bullet)
-                         (:step bullet)
-                         (entity-next-step bullet)
+                         (inc (:step bullet))
+                         (dec (entity-next-step bullet))
                          entity)]
          (if (and (not (:from-enemy? bullet)) collision?)
            (recur (decrement-enemy-hits entity)
@@ -822,12 +822,6 @@ flipper appears to flip 'inside' the level:
       key-codes/LEFT  (assoc game-state
                         :player
                         (assoc player :segment (segment-entity-cw player)))
-      key-codes/UP (assoc game-state
-                        :player
-                        (assoc player :step (- (:step player) 10)))
-      key-codes/DOWN (assoc game-state
-                        :player
-                        (assoc player :step (+ (:step player) 10)))
       key-codes/SPACE (assoc game-state
                         :projectile-list
                         (add-player-projectile projectile-list player))
