@@ -10,6 +10,7 @@
 
 (defpage "/tempest/:level" {:keys [level]}
   (common/site-layout
+   (include-js "/analytics.js")
    (include-js "/tempest.js")
    [:div#links {:style "color: #FFFFFF; position: absolute; z-index: 2;"}
     (link-to {:style (str "color: #FFFFFF; position:absolute;"

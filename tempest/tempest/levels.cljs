@@ -291,18 +291,18 @@ Functions related to generating paths representing levels.
 
 (def *levels*
   [ (make-level-entry *level1_lines* false
-                      {:flipper 5}
+                      {:flipper 5 :tanker 0}
                       {:flipper 0.01})
     (make-level-entry *level2_lines* true
                       {:flipper 20}
                       {:flipper 0.01}
                       :length-fn #(* 9 %))
     (make-level-entry *level3_lines* false
-                      {:flipper 20}
-                      {:flipper 0.01})
+                      {:flipper 20 :tanker 5}
+                      {:flipper 0.01 :tanker 0.005})
     (make-level-entry *level4_lines* false
-                      {:flipper 20}
-                      {:flipper 0.01})
+                      {:flipper 20 :tanker 10}
+                      {:flipper 0.01 :tanker 0.005})
     (make-level-entry *level5_lines* false
                       {:flipper 20}
                       {:flipper 0.01})

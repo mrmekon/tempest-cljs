@@ -372,18 +372,21 @@ given level."
      (projectile-path-with-width (* 0.3 (entity-desired-width projectile))))))
 
 (defn tanker-path-with-width
-  "Returns a path to draw a 'flipper' enemy with given width."
+  "Returns a path to draw a 'tanker' enemy with given width.
+   Tanker is a diamond with an angular 'cat-eye' inside."
   [width]
-  (let [r (/ width (js/Math.cos (util/deg-to-rad 16)))]
-    [[0 0]
-     [(/ r 2) 16]
-     [(/ r 4) 214]
-     [(/ r 4) 326]
-     [r 164]
-     [(/ r 4) 326]
-     [(/ r 4) 214]
-     [(/ r 2) 16]]))
-
+  (let [r (* .85 (/ width (* 2 (js/Math.cos (util/deg-to-rad 45)))))
+        midheight (* .85 (* r (js/Math.sin (util/deg-to-rad 45))))
+        r2 (* .85 (/ (/ width 2) (* 2 (js/Math.cos (util/deg-to-rad 65)))))]
+    [[midheight 270]
+     [r 45]
+     [r 135]
+     [r 225]
+     [r 315]
+     [r2 65]
+     [r2 115]
+     [r2 245]
+     [r2 295]]))
 
 (defn flipper-path-with-width
   "Returns a path to draw a 'flipper' enemy with given width."

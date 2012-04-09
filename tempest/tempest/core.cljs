@@ -13,7 +13,8 @@ the player's ship, enemies, and projectiles.
             [goog.dom :as dom]
             [goog.events :as events]
             [goog.events.KeyCodes :as key-codes]
-            [clojure.browser.repl :as repl]))
+            [clojure.browser.repl :as repl])
+  (:require-macros [tempest.macros :as macros]))
 
 (repl/connect "http://localhost:9000/repl")
 
@@ -58,6 +59,8 @@ after passing through all the other functions.  This implements the game loop.
        remove-collided-bullets
        update-projectile-locations
        update-enemy-locations
+       maybe-split-tankers
+       handle-dead-enemies
        maybe-enemies-shoot
        maybe-make-enemy
        check-if-player-captured
@@ -196,6 +199,7 @@ after passing through all the other functions.  This implements the game loop.
    })
 
 (defn build-tanker
+  "Returns a new tanker enemy.  Tankers move slowly and do not shoot or flip."
   [level seg-idx & {:keys [step] :or {step 0}}]
   (assoc (build-enemy level seg-idx :step step)
     :type (EnemyEnum "TANKER")
@@ -251,22 +255,13 @@ after passing through all the other functions.  This implements the game loop.
    If zero enemies are on the board, probability of placing one is increased
    two-fold to avoid long gaps with nothing to do."
   [game-state]
-  (let [level (:level game-state)
-        segments (count (:segments level))
-        remaining (:remaining level)
-        enemy-list (:enemy-list game-state)
-        r (if (pos? (count enemy-list)) (rand) (/ (rand) 2))]
-    (cond
-     (and (<= r (:flipper (:probability level))) (pos? (:flipper remaining)))
-     (do
-       (assoc game-state
-         :enemy-list (cons (build-flipper level (rand-int segments)) enemy-list)
-         :level (assoc level
-                  :remaining (assoc remaining
-                               :flipper (dec (:flipper remaining))))))
-     :else game-state)))
+  (let [;;flipper-fn (macros/dumbtest flipper)
+        flipper-fn (macros/random-enemy-fn flipper)
+        tanker-fn (macros/random-enemy-fn tanker)]
+    (->> game-state
+         flipper-fn
+         tanker-fn)))
 
-;;(count (:segments level))
 
 (defn flip-angle-stride
   "Returns the angle stride of a flipper, which is how many radians to
@@ -363,6 +358,17 @@ flipper appears to flip 'inside' the level:
                   (DirectionEnum "CCW")
                   (DirectionEnum "CW"))]
     (assoc flipper :flip-permanent-dir new-dir)))
+
+(defn engage-flipping
+  "Mark flipper as flipping in given direction, unless no segment is in
+   that direction."
+  [flipper flip-dir]
+  (let [flip-seg-idx (segment-for-flip-direction flipper flip-dir)
+        cw? (= flip-dir (DirectionEnum "CW"))]
+    (if (not= flip-seg-idx (:segment flipper))
+      (mark-flipper-for-flipping flipper flip-dir
+                                 flip-seg-idx cw?)
+      flipper)))
 
 (defn maybe-engage-flipping
   "Given a flipper, returns the flipper possibly modified to be in a state
@@ -515,18 +521,6 @@ flipper appears to flip 'inside' the level:
   [entity]
   (assoc entity :step (entity-next-step entity)))
 
-(defn test-update-entity-position! []
-  (and 
-   (= 11 (:step (update-entity-position! (build-enemy level 0 :step 10))))
-   (= 5 (:step (update-entity-position!
-                (build-projectile level 0 -5 :step 10))))
-   (= 15 (:step (update-entity-position!
-                (build-projectile level 0 5 :step 10))))
-   (= 0 (:step (update-entity-position!
-                (build-projectile level 0 -5 :step 0))))
-   (= 100 (:step (update-entity-position!
-                  (build-projectile level 0 5 :step 100))))))
-  
 (defn update-entity-list
   "Call update-entity-position! on all entities in list."
   [entity-list]
@@ -542,16 +536,6 @@ flipper appears to flip 'inside' the level:
      (= (:damage-segment entity) seg-idx)
      (>= (:step entity) min)
      (<= (:step entity) max))))
-
-(defn test-entity-between-steps []
-  (and
-   (true? (entity-between-steps 0 0 10 (build-enemy level 0 :step 5)))
-   (false? (entity-between-steps 0 0 10 (build-enemy level 0 :step 15)))
-   (false? (entity-between-steps 0 0 10 (build-enemy level 1 :step 5)))
-   (false? (entity-between-steps 5 10 20 (build-enemy level 5 :step 5)))
-   (true? (entity-between-steps 5 10 20 (build-enemy level 5 :step 15)))
-  ))
-
 
 (defn projectiles-after-collision
   "Given an entity and a list of projectiles, returns the entity and updated
@@ -578,25 +562,6 @@ flipper appears to flip 'inside' the level:
                   was-hit?)))))
    entity projectile-list '() false))
 
-(defn test-projectiles-after-collision []
-  (let [level (get levels/*levels* 4)
-        projectiles (list (build-projectile level 0 -1 :step 9)
-                          (build-projectile level 0 -5 :step 9)
-                          (build-projectile level 0 1 :step 9)
-                          (build-projectile level 0 2 :step 9)
-                          (build-projectile level 0 5 :step 20)
-                          (build-projectile level 5 2 :step 9))
-        result (projectiles-after-collision
-                (build-enemy level 0 :step 10)
-                projectiles)]
-    (println (str "Projectiles: "
-                  (pr-str (count (:projectiles result)))
-                  " of "
-                  (pr-str (count projectiles))))
-    (println (str "Hits left: " (pr-str (:hits-remaining (:entity result)))))
-    (println (str "Was hit: " (pr-str (:was-hit? result))))
-     ))
-
 (defn entities-after-collisions
   "Given a list of entities and a list of projectiles, returns the lists
    with entity hit counts updated, entities removed if they have no hits
@@ -611,40 +576,66 @@ flipper appears to flip 'inside' the level:
        (let [{entity :entity projectiles :projectiles was-hit? :was-hit?}
              (projectiles-after-collision (first entities-in)
                                           projectiles-in)]
-         (if (and was-hit? (<= (:hits-remaining entity) 0))
-           (recur (rest entities-in)
-                  entities-out
-                  projectiles)
            (recur (rest entities-in)
                   (cons entity entities-out)
-                  projectiles)))))
+                  projectiles))))
    entity-list '() projectile-list))
 
-(defn test-entities-after-collisions []
-  (let [level (get levels/*levels* 4)
-        enemies (list (build-enemy level 0 :step 10)
-                      (build-enemy level 1 :step 20)
-                      (build-enemy level 2 :step 30)
-                      (build-enemy level 3 :step 40)
-                      (build-enemy level 4 :step 50)
-                      (build-enemy level 5 :step 60))
-        projectiles (list (build-projectile level 0 -5 :step 9)
-                          (build-projectile level 0 5 :step 9)
-                          (build-projectile level 1 -5 :step 19)
-                          (build-projectile level 1 5 :step 19)
-                          (build-projectile level 3 -5 :step 35)
-                          (build-projectile level 3 5 :step 35))
-        result (entities-after-collisions enemies projectiles)]
-    (println (str "Entities: "
-                  (pr-str (count (:entities result)))
-                  " of "
-                  (pr-str (count enemies))))
-    (println (str "Projectiles: "
-                  (pr-str (count (:projectiles result)))
-                  " of "
-                  (pr-str (count projectiles))))
-    ))
 
+(defn new-flippers-from-tanker
+  "Spawns two new flippers from one tanker.  These flippers are automatically
+   set to be flipping to the segments surround the tanker, unless one of the
+   directions is blocked, in which case that flipper just stays on the tanker's
+   segment."
+  [enemy]
+  (let [{:keys [segment level step]} enemy]
+    (list
+     (engage-flipping
+      (build-flipper level segment :step step)
+      (DirectionEnum "CW"))
+     (engage-flipping
+      (build-flipper level segment :step step)
+      (DirectionEnum "CCW")))))
+
+(defn enemy-list-after-deaths
+  "Returns the enemy list updated for deaths.  This means removing enemies
+   that died, and possibly adding new enemies for those that spawn children
+   on death."
+  [enemy-list]
+  (let [{live-enemies false dead-enemies true}
+        (group-by #(zero? (:hits-remaining %)) enemy-list)]
+    (loop [[enemy & enemies] dead-enemies
+           enemies-out '()]
+      (cond
+       (nil? enemy) (concat live-enemies enemies-out)
+       (= (:type enemy) (EnemyEnum "TANKER"))
+       (recur enemies (concat (new-flippers-from-tanker enemy) enemies-out))
+       :else (recur enemies enemies-out)))))
+
+(defn handle-dead-enemies
+  "Return game state after handling dead enemies, by removing them and possibly
+   replacing them with children."
+  [game-state]
+  (let [enemy-list (:enemy-list game-state)]
+    (assoc game-state :enemy-list (enemy-list-after-deaths enemy-list))))
+
+(defn kill-tanker-at-top
+  "If the given tanker is at the top of a level, mark it as dead."
+  [tanker]
+  (let [step (:step tanker)
+        maxstep (:steps (:level tanker))]
+    (if (= step maxstep)
+      (assoc tanker :hits-remaining 0)
+      tanker)))
+
+(defn maybe-split-tankers
+  "Marks tankers at the top of the level as ready to split into flippers."
+  [game-state]
+  (let [enemy-list (:enemy-list game-state)
+        {tankers true others false}
+        (group-by #(= (:type %) (EnemyEnum "TANKER")) enemy-list)]
+    (assoc game-state
+      :enemy-list (concat (map kill-tanker-at-top tankers) others))))
 
 (defn animate-player-capture
   "Updates player's position on board while player is in the process of being
