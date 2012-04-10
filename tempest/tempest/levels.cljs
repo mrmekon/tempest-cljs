@@ -291,8 +291,8 @@ Functions related to generating paths representing levels.
 
 (def *levels*
   [ (make-level-entry *level1_lines* false
-                      {:flipper 5 :tanker 0}
-                      {:flipper 0.01})
+                      {:flipper 0 :tanker 0 :spiker 4}
+                      {:flipper 0.01 :tanker 0  :spiker 1})
     (make-level-entry *level2_lines* true
                       {:flipper 20}
                       {:flipper 0.01}

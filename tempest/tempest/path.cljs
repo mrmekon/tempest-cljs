@@ -360,7 +360,16 @@ given level."
   (let [coord (polar-entity-coord tanker)]
     (rotate-path
      (enemy-angle tanker)
-     (tanker-path-with-width (* 0.8 (entity-desired-width tanker))))))
+     (tanker-path-with-width (entity-desired-width tanker)))))
+
+(defn spiker-path-on-level
+  "Returns the path of polar coordinates to draw a flipper correctly at its
+   current location.  It corrects for size and angle."
+  [entity]
+  (let [coord (polar-entity-coord entity)]
+    (rotate-path
+     (enemy-angle entity)
+     (spiker-path-with-width (entity-desired-width entity)))))
 
 (defn projectile-path-on-level
   "Returns the path of polar coordinates to draw a projectile correctly at its
@@ -375,9 +384,9 @@ given level."
   "Returns a path to draw a 'tanker' enemy with given width.
    Tanker is a diamond with an angular 'cat-eye' inside."
   [width]
-  (let [r (* .85 (/ width (* 2 (js/Math.cos (util/deg-to-rad 45)))))
-        midheight (* .85 (* r (js/Math.sin (util/deg-to-rad 45))))
-        r2 (* .85 (/ (/ width 2) (* 2 (js/Math.cos (util/deg-to-rad 65)))))]
+  (let [r (* .55 (/ width (* 2 (js/Math.cos (util/deg-to-rad 45)))))
+        midheight (* .55 (* r (js/Math.sin (util/deg-to-rad 45))))
+        r2 (* .55 (/ (/ width 2) (* 2 (js/Math.cos (util/deg-to-rad 65)))))]
     [[midheight 270]
      [r 45]
      [r 135]
@@ -400,6 +409,28 @@ given level."
      [(/ r 4) 326]
      [(/ r 4) 214]
      [(/ r 2) 16]]))
+
+(defn spiker-path-with-width
+  "Returns a path to draw a 'spiker' enemy with given width."
+  [width]
+  (let [r (util/round (/ width (js/Math.cos (util/deg-to-rad 16))))
+        r_14 (/ r 14) r_11 (/ r 11) r_8 (/ r 8) r_6 (/ r 6)
+        r_5 (/ r 5) r_4 (/ r 4)]
+    [[0 0]
+     [r_14 0]
+     [r_14 60]
+     [r_11 120]
+     [r_11 180]
+     [r_8  240]
+     [r_8  300]
+     [r_6  0]
+     [r_6  60]
+     [r_5  120]
+     [r_5  180]
+     [r_4  240]
+     [r_4  300]
+     [r_5  350]
+     [r_5  40]]))
 
 
 (defn player-path-with-width

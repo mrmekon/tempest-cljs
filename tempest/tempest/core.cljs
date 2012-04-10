@@ -60,8 +60,10 @@ after passing through all the other functions.  This implements the game loop.
                  remove-collided-bullets
                  update-projectile-locations
                  update-enemy-locations
+                 update-enemy-directions
                  maybe-split-tankers
                  handle-dead-enemies
+                 handle-exiting-spikers
                  maybe-enemies-shoot)
         gs3 (->> gs2
                  maybe-make-enemy
@@ -211,6 +213,20 @@ after passing through all the other functions.  This implements the game loop.
     :shoot-probability 0.0
     ))
 
+(defn build-spiker
+  "Returns a new spiker enemy.  Spiker cannot change segments, travels quickly,
+   and turns around on a random step, where 20 <= step <= max_step - 20.
+   Spikers can shoot, and they lay spikes behind them as they move."
+  [level seg-idx & {:keys [step] :or {step 0}}]
+  (assoc (build-enemy level seg-idx :step step)
+    :type (EnemyEnum "SPIKER")
+    :path-fn path/spiker-path-on-level
+    :can-flip false
+    :stride 1
+    :shoot-probability 0.001
+    :max-step (+ (rand-int (- (:steps level) 40)) 20)
+    ))
+
 (defn build-flipper
   "A more specific form of build-enemy for initializing a flipper."
   [level seg-idx & {:keys [step] :or {step 0}}]
@@ -260,10 +276,12 @@ after passing through all the other functions.  This implements the game loop.
   [game-state]
   (let [;;flipper-fn (macros/dumbtest flipper)
         flipper-fn (macros/random-enemy-fn flipper)
-        tanker-fn (macros/random-enemy-fn tanker)]
+        tanker-fn (macros/random-enemy-fn tanker)
+        spiker-fn (macros/random-enemy-fn spiker)]
     (->> game-state
          flipper-fn
-         tanker-fn)))
+         tanker-fn
+         spiker-fn)))
 
 
 (defn flip-angle-stride
@@ -520,10 +538,22 @@ flipper appears to flip 'inside' the level:
   [entity]
   (assoc entity :step (entity-next-step entity)))
 
-(defn update-entity-list
+(defn update-entity-list-positions
   "Call update-entity-position! on all entities in list."
   [entity-list]
   (map update-entity-position! entity-list))
+
+(defn update-entity-direction!
+  [entity]
+  (let [{:keys [step max-step stride]} entity
+        newstride (if (>= step max-step) (- stride) stride)]
+  (assoc entity :stride newstride)))
+
+(defn update-entity-list-directions
+  [entity-list]
+  (let [{spikers true others false}
+        (group-by #(contains? % :max-step) entity-list)]
+    (concat others (map update-entity-direction! spikers))))
 
 (defn entity-between-steps
   "Returns true of entity is on seg-idx, and between steps step0 and step1,
@@ -620,6 +650,25 @@ flipper appears to flip 'inside' the level:
   (let [enemy-list (:enemy-list game-state)]
     (assoc game-state :enemy-list (enemy-list-after-deaths enemy-list))))
 
+(defn enemy-list-after-exiting-spikers
+  [enemy-list]
+  (let [{spikers true others false}
+        (group-by #(= (:type %) (EnemyEnum "SPIKER")) enemy-list)]
+    (loop [[enemy & enemies] spikers
+           enemies-out '()]
+      (cond
+       (nil? enemy) (concat others enemies-out)
+       (and (neg? (:stride enemy)) (zero? (:step enemy)))
+       (recur enemies enemies-out)
+       :else
+       (recur enemies (cons enemy enemies-out))))))
+
+(defn handle-exiting-spikers
+  [game-state]
+  (let [enemy-list (:enemy-list game-state)]
+    (assoc game-state
+      :enemy-list (enemy-list-after-exiting-spikers enemy-list))))
+
 (defn kill-tanker-at-top
   "If the given tanker is at the top of a level, mark it as dead."
   [tanker]
@@ -642,38 +691,38 @@ flipper appears to flip 'inside' the level:
   "Updates player's position on board while player is in the process of being
    captured by an enemy, and marks player as dead when he reaches the inner
    boundary of the level.  When player dies, level zoom-out is initiated."
-  [global-state]
-  (let [player (:player global-state)
+  [game-state]
+  (let [player (:player game-state)
         captured? (:captured? player)
         isdead? (zero? (:step player))]
     (cond
-     (false? captured?) global-state
-     (true? isdead?) (assoc global-state
+     (false? captured?) game-state
+     (true? isdead?) (assoc game-state
                        :player (assoc player :is-dead? true)
                        :enemy-list '()
                        :projectile-list '()
                        :is-zooming? true
                        :zoom-in? false)
-     :else  (assoc global-state :player (update-entity-position! player)))))
+     :else  (assoc game-state :player (update-entity-position! player)))))
 
 (defn update-zoom
   "Updates current zoom value of the level, based on direction of :zoom-in?
-   in the global-state.  This is used to animate the board zooming in or
+   in the game-state.  This is used to animate the board zooming in or
    zooming out at the start or end of a round.  If this was a zoom out, and
    it's finished, mark the level as done so it can restart."
-  [global-state]
-  (let [zoom (:zoom global-state)
-        zoom-in? (:zoom-in? global-state)
+  [game-state]
+  (let [zoom (:zoom game-state)
+        zoom-in? (:zoom-in? game-state)
         zoom-step 0.04
         newzoom (if zoom-in? (+ zoom zoom-step) (- zoom zoom-step))
         target (if zoom-in? 1.0 0.0)
         cmp (if zoom-in? >= <=)]
-    (if (cmp zoom target) (assoc global-state
+    (if (cmp zoom target) (assoc game-state
                             :is-zooming? false
                             :level-done? (not zoom-in?))
         (if (cmp newzoom target)
-          (assoc global-state :zoom target)
-          (assoc global-state :zoom newzoom)))))
+          (assoc game-state :zoom target)
+          (assoc game-state :zoom newzoom)))))
 
 (defn clear-player-segment
   "Returns game-state unchanged, and as a side affect clears the player's
@@ -702,18 +751,18 @@ flipper appears to flip 'inside' the level:
   "Draws the level when level is zooming in or out, and updates the zoom level.
    This doesn't redraw the board normally, since the board is drawn on a
    different HTML5 canvas than the players for efficiency."
-  [global-state]
-  (let [is-zooming? (:is-zooming? global-state)
-        zoom (:zoom global-state)
-        {width :width height :height} (:dims global-state)]
+  [game-state]
+  (let [is-zooming? (:is-zooming? game-state)
+        zoom (:zoom game-state)
+        {width :width height :height} (:dims game-state)]
     (if is-zooming?
       (do
-        (draw/clear-context (:bgcontext global-state) (:dims global-state))
-        (draw/draw-board (assoc global-state
+        (draw/clear-context (:bgcontext game-state) (:dims game-state))
+        (draw/draw-board (assoc game-state
                            :dims {:width (/ width zoom)
                                   :height (/ height zoom)}))
-        (update-zoom global-state))
-        global-state)))
+        (update-zoom game-state))
+        game-state)))
         
 
 (defn collisions-with-projectile
@@ -1005,7 +1054,7 @@ The setTimeout fail-over is hard-coded to attempt 30fps.
         rm-fn (partial remove projectile-off-level?)]
     (assoc game-state
       :projectile-list (-> projectile-list
-                           update-entity-list
+                           update-entity-list-positions
                            rm-fn))))
 
 (defn update-enemy-locations
@@ -1013,7 +1062,12 @@ The setTimeout fail-over is hard-coded to attempt 30fps.
    based on their speeds and current position."
   [game-state]
   (let [{enemy-list :enemy-list} game-state]
-    (assoc game-state :enemy-list (update-entity-list enemy-list))))
+    (assoc game-state :enemy-list (update-entity-list-positions enemy-list))))
+
+(defn update-enemy-directions
+  [game-state]
+  (let [{enemy-list :enemy-list} game-state]
+    (assoc game-state :enemy-list (update-entity-list-directions enemy-list))))
 
 (defn schedule-next-frame
   "Tells the player's browser to schedule the next frame to be drawn, using
