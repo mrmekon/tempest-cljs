@@ -66,6 +66,7 @@ after passing through all the other functions.  This implements the game loop.
                  handle-exiting-spikers
                  maybe-enemies-shoot)
         gs3 (->> gs2
+                 handle-spike-laying
                  maybe-make-enemy
                  check-if-player-captured
                  update-player-if-shot
@@ -97,6 +98,7 @@ after passing through all the other functions.  This implements the game loop.
   {:enemy-list '()
    :projectile-list '()
    :player '()
+   :spikes []
    :context nil
    :bgcontext nil
    :anim-fn identity
@@ -136,7 +138,8 @@ after passing through all the other functions.  This implements the game loop.
       :is-zooming? true
       :level-done? false
       :projectile-list '()
-      :enemy-list '())))
+      :enemy-list '()
+      :spikes (vec (take (count (:segments level)) (repeat 0))))))
 
 (defn maybe-change-level
   "Reloads or moves to the next level if player is dead, or if all enemies are
@@ -669,6 +672,24 @@ flipper appears to flip 'inside' the level:
     (assoc game-state
       :enemy-list (enemy-list-after-exiting-spikers enemy-list))))
 
+(defn spikes-after-spike-laying
+  [enemy-list spikes]
+  (loop [[enemy & enemies] enemy-list
+         spikes-out spikes]
+    (let [{:keys [step segment]} enemy
+          spike-step (nth spikes-out segment)]
+    (cond
+     (nil? enemy) spikes-out
+     (>= step spike-step) (recur enemies (assoc spikes-out segment step))
+     :else (recur enemies spikes-out)))))
+     
+(defn handle-spike-laying
+  [game-state]
+  (let [enemy-list (:enemy-list game-state)
+        spikes (:spikes game-state)
+        spiker-list (filter #(= (:type %) (EnemyEnum "SPIKER")) enemy-list)]
+    (assoc game-state :spikes (spikes-after-spike-laying spiker-list spikes))))
+
 (defn kill-tanker-at-top
   "If the given tanker is at the top of a level, mark it as dead."
   [tanker]
@@ -954,6 +975,7 @@ The setTimeout fail-over is hard-coded to attempt 30fps.
         game-state
         {enemy-shots true player-shots false}
         (group-by :from-enemy? projectile-list)]
+    (draw/draw-all-spikes game-state)
     (if (not (:is-dead? player))
       (draw/draw-player context dims level player))
     (draw/draw-entities context dims level enemy-list {:r 150 :g 10 :b 10})

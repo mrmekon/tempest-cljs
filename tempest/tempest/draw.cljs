@@ -128,6 +128,30 @@ level functions to draw complete game entities using the primitives.
                          (:flip-cur-angle entity))
       (.closePath context))))
 
+(defn draw-spike
+  [{:keys [dims context level]} seg-idx length]
+  (.beginPath context)
+  (set! (. context -strokeStyle) (str "rgb(10, 150, 10)"))
+  (draw-line context
+              (path/polar-to-cartesian-centered
+               (path/segment-midpoint level seg-idx false) dims)
+              (path/polar-to-cartesian-centered
+               (path/polar-segment-midpoint level seg-idx length) dims))
+  (.closePath context))
+
+(defn draw-all-spikes
+  [game-state]
+  (let [spikes (:spikes game-state) spike-count (count spikes)]
+    (doseq [idx (range spike-count)]
+      (let [length (nth spikes idx)] 
+        (if (pos? length)
+          (draw-spike game-state idx length))))))
+
+;;(for [idx (range spike-count)
+;;                  spike (nth spikes idx)
+;;                  :when (pos? spike)] 
+;;  #(draw-spike game-state idx spike))
+
 (defn draw-player-segment
   "Draws just the segment of the board that the player is on, with the given
    color."
