@@ -47,32 +47,33 @@ after passing through all the other functions.  This implements the game loop.
 (defn game-logic-playable
   "Called by next-game-state when game and player are active."
   [game-state]
-  (->> game-state
-       clear-player-segment
-       dequeue-keypresses
-       highlight-player-segment
-       maybe-change-level
-       clear-frame
-       draw-board
-       render-frame
-       remove-collided-entities
-       remove-collided-bullets
-       update-projectile-locations
-       update-enemy-locations
-       maybe-split-tankers
-       handle-dead-enemies
-       maybe-enemies-shoot
-       maybe-make-enemy
-       check-if-player-captured
-       update-player-if-shot
-       check-if-enemies-remain
-       update-entity-is-flipping
-       update-entity-flippyness
-       animate-player-capture
-       update-frame-count
-       maybe-render-fps-display
-       schedule-next-frame
-       ))
+  (let [gs1 (->> game-state
+                 clear-player-segment
+                 dequeue-keypresses
+                 highlight-player-segment
+                 maybe-change-level
+                 clear-frame
+                 draw-board
+                 render-frame)
+        gs2 (->> gs1
+                 remove-collided-entities
+                 remove-collided-bullets
+                 update-projectile-locations
+                 update-enemy-locations
+                 maybe-split-tankers
+                 handle-dead-enemies
+                 maybe-enemies-shoot)
+        gs3 (->> gs2
+                 maybe-make-enemy
+                 check-if-player-captured
+                 update-player-if-shot
+                 check-if-enemies-remain
+                 update-entity-is-flipping
+                 update-entity-flippyness
+                 animate-player-capture
+                 update-frame-count
+                 maybe-render-fps-display)]
+    (->> gs3 schedule-next-frame)))
 
 
 (defn game-logic-non-playable

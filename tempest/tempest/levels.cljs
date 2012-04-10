@@ -304,25 +304,25 @@ Functions related to generating paths representing levels.
                       {:flipper 20 :tanker 10}
                       {:flipper 0.01 :tanker 0.005})
     (make-level-entry *level5_lines* false
-                      {:flipper 20}
-                      {:flipper 0.01})
+                      {:flipper 20 :tanker 10}
+                      {:flipper 0.01 :tanker 0.005})
     (make-level-entry *level6_lines* true
-                      {:flipper 20}
-                      {:flipper 0.01})
+                      {:flipper 20 :tanker 10}
+                      {:flipper 0.01 :tanker 0.005})
     (make-level-entry *level7_lines* false
-                      {:flipper 20}
-                      {:flipper 0.01})
+                      {:flipper 20 :tanker 10}
+                      {:flipper 0.01 :tanker 0.005})
     (make-level-entry *level8_lines* false
-                      {:flipper 20}
-                      {:flipper 0.01}
+                      {:flipper 20 :tanker 10}
+                      {:flipper 0.01 :tanker 0.005}
                       :length-fn #(* 10 %)
                       :steps 400)
     (make-level-entry *level9_lines* false
-                      {:flipper 20}
-                      {:flipper 0.01})
+                      {:flipper 20 :tanker 10}
+                      {:flipper 0.01 :tanker 0.005})
     (make-level-entry *level10_lines* false
-                      {:flipper 20}
-                      {:flipper 0.01})
+                      {:flipper 20 :tanker 10}
+                      {:flipper 0.01 :tanker 0.005})
     ])
 
 
