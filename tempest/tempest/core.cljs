@@ -56,6 +56,7 @@ after passing through all the other functions.  This implements the game loop.
                  draw-board
                  render-frame)
         gs2 (->> gs1
+                 remove-spiked-bullets
                  remove-collided-entities
                  remove-collided-bullets
                  update-projectile-locations
@@ -115,6 +116,8 @@ after passing through all the other functions.  This implements the game loop.
    })
 
 (defn check-if-enemies-remain
+  "If no enemies are left on the level, and no enemies remain to be launched
+   mark level as zooming out."
   [game-state]
   (let [level (:level game-state)
         player (:player game-state)
@@ -122,7 +125,9 @@ after passing through all the other functions.  This implements the game loop.
         unlaunched (apply + (vals (:remaining level)))
         remaining (+ on-board unlaunched)]
     (if (zero? remaining)
-      (assoc game-state :is-zooming? true :zoom-in? false)
+      ;; TODO instead of clearing spikes, zoom down level
+      (assoc (clear-level-entities game-state)
+        :is-zooming? true :zoom-in? false)
       game-state)))
 
 (defn change-level
@@ -718,13 +723,19 @@ flipper appears to flip 'inside' the level:
         isdead? (zero? (:step player))]
     (cond
      (false? captured?) game-state
-     (true? isdead?) (assoc game-state
+     (true? isdead?) (assoc (clear-level-entities game-state)
                        :player (assoc player :is-dead? true)
-                       :enemy-list '()
-                       :projectile-list '()
                        :is-zooming? true
                        :zoom-in? false)
      :else  (assoc game-state :player (update-entity-position! player)))))
+
+(defn clear-level-entities
+  "Clears enemies, projectiles, and spikes from level."
+  [game-state]
+  (assoc game-state
+    :enemy-list '()
+    :projectile-list '()
+    :spikes []))
 
 (defn update-zoom
   "Updates current zoom value of the level, based on direction of :zoom-in?
@@ -1042,6 +1053,40 @@ The setTimeout fail-over is hard-coded to attempt 30fps.
         non-collided (mapcat projectile-list-without-collisions segment-lists)]
     (assoc game-state :projectile-list non-collided)))
 
+(defn decrement-spike-length
+  [spike-len hit-count]
+  (let [new-len (- spike-len (* 10 hit-count))]
+    (if (<= new-len 5) 0 new-len)))
+
+(defn filter-spike-bullet-collisions
+  [projectile-list spike-len]
+  (let [{hit true missed false}
+        (group-by #(<= (:step %) spike-len) projectile-list)]
+    [missed (decrement-spike-length spike-len (count hit))]))
+
+(defn remove-spiked-bullets
+  [game-state]
+  (let [projectile-list (:projectile-list game-state)
+        {player-list false enemy-list true}
+        (group-by :from-enemy? projectile-list)
+        segmented-projectiles (group-by :segment player-list)]
+    (loop [[seg-bullets & remaining] segmented-projectiles
+           spikes (:spikes game-state)
+           projectiles-out '()]
+      (if (nil? seg-bullets)
+        (assoc game-state
+          :projectile-list (concat projectiles-out enemy-list)
+          :spikes spikes)
+        (let [[key bullets] seg-bullets
+              spike-len (nth spikes key)
+              [bullets new-len] (filter-spike-bullet-collisions bullets
+                                                                spike-len)]
+          (recur remaining
+                 (assoc spikes key new-len)
+                 (concat projectiles-out bullets)))))))
+         
+    
+
 (defn bullets-will-kill-player?
   "Returns true given bullet will hit the given player."
   [player bullet]
@@ -1060,11 +1105,9 @@ The setTimeout fail-over is hard-coded to attempt 30fps.
                                #(bullets-will-kill-player? player %)
                                on-segment)]
     (if-not (empty? hit)
-      (assoc game-state
+      (assoc (clear-level-entities game-state)
         :player (assoc player :is-dead? true)
         :is-zooming? true
-        :enemy-list '()
-        :projectile-list '()
         :zoom-in? false)
       game-state)))
 
