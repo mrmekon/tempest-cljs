@@ -4,6 +4,23 @@ Functions related to the game of tempest, and game state.
 Functions in this module create the game state, and modify it based on
 player actions or time.  This includes management of entities such as
 the player's ship, enemies, and projectiles.
+
+Enemy types:
+
+ * **Flipper** -- Moves quickly up level, flips randomly to adjacent segments,
+   and shoots.  When a flipper reaches the outer edge, he flips endlessly
+   back and forth along the perimeter.  If he touches the player, he carries
+   the player down the level and the player is dead.
+ * **Tanker** -- Moves slowly, shoots, and never leaves his segment.  If a
+   tanker is shot or reaches the outer edge, it is destroyed and two
+   flippers flip out of it in opposite directions.
+ * **Spiker** -- Moves quickly, shoots,  and lays a spike on the level where it
+   travels.  Spikers cannot change segments.  The spiker turns around when it
+   reaches a random point on the level and goes back down, and disappears if
+   it reaches the inner edge.  The spike it lays remains, and can be shot.
+   If the player kills all the enemies, he must fly down the level and avoid
+   hitting any spikes, or he will be killed.
+
 "}
   tempest.core
   (:require [tempest.levels :as levels]
@@ -18,14 +35,6 @@ the player's ship, enemies, and projectiles.
 
 (repl/connect "http://localhost:9000/repl")
 
-
-(def ^{:doc
-       "Global queue for storing player's keypresses.  The browser
-        sticks keypresses in this queue via callback, and keys are
-        later pulled out and applied to the game state during the
-        game logic loop."}
-  *key-event-queue* (atom '()))
-
 ;; ---
 
 (defn next-game-state
@@ -38,6 +47,24 @@ game; it applies all of the logic.
 The last call, schedule-next-frame, schedules this function to be called
 again by the browser sometime in the future with the update game-state
 after passing through all the other functions.  This implements the game loop.
+
+This function actualy dispatches to one of multiple other functions, starting
+with the 'game-logic-' prefix, that actually do the function threading.  This
+is because the game's main loop logic changes based on a few possible states:
+
+ * Normal, active gameplay is handled by game-logic-playable.  This is the
+   longest path, and has to handle all of the gameplay logic, collision
+   detection, etc.
+ * Animation of levels zooming in and out, when first loading or after the
+   player dies, are handled by game-logic-non-playable.  Most of the game
+   logic is disabled during this stage, as it is primarily displaying a
+   non-interactive animation.
+ * 'Shooping' is what I call the end-of-level gameplay, after all enemies are
+   defeated, when the player's ship travels down the level and must destroy
+   or avoid any spikes remaining.  All of the game logic regarding enemies is
+   disabled in this path, but moving and shooting still works.
+ * The 'Paused' state is an extremely reduced state that only listens for the
+   unpause key.
 "
   [game-state]
   (cond
@@ -57,7 +84,10 @@ after passing through all the other functions.  This implements the game loop.
        schedule-next-frame))
 
 (defn game-logic-player-shooping-down-level
-  "That's right, I named it that."
+  "That's right, I named it that.  This is the game logic path that handles
+   the player 'shooping' down the level, traveling into it, after all enemies
+   have been defeated.  The player can still move and shoot, and can kill or
+   be killed by spikes remaining on the level."
   [game-state]
   (->> game-state
        clear-player-segment
@@ -77,7 +107,9 @@ after passing through all the other functions.  This implements the game loop.
        ))
 
 (defn game-logic-playable
-  "Called by next-game-state when game and player are active."
+  "Called by next-game-state when game and player are active.  This logic path
+   handles all the good stuff: drawing the player, drawing the board, enemies,
+   bullets, spikes, movement, player capture, player death, etc."
   [game-state]
   (let [gs1 (->> game-state
                  clear-player-segment
@@ -113,7 +145,9 @@ after passing through all the other functions.  This implements the game loop.
 
 
 (defn game-logic-non-playable
-  "Called by next-game-state for non-playable animations."
+  "Called by next-game-state for non-playable animations.  This is used when
+   the level is quickly zoomed in or out between stages or after the player
+   dies.  Most of the game logic is disabled during this animation."
   [game-state]
   (->> game-state
        dequeue-keypresses-while-paused
@@ -125,6 +159,14 @@ after passing through all the other functions.  This implements the game loop.
        schedule-next-frame))
 
 ;; ---
+
+(def ^{:doc
+       "Global queue for storing player's keypresses.  The browser
+        sticks keypresses in this queue via callback, and keys are
+        later pulled out and applied to the game state during the
+        game logic loop."}
+  *key-event-queue* (atom '()))
+
 
 (defn build-game-state
   "Returns an empty game-state map."
@@ -159,15 +201,9 @@ after passing through all the other functions.  This implements the game loop.
         unlaunched (apply + (vals (:remaining level)))
         remaining (+ on-board unlaunched)]
     (if (zero? remaining)
-      ;; TODO instead of clearing spikes, zoom down level
-      ;;(assoc (clear-level-entities game-state) :is-zooming? true :zoom-in? false)
-      (do (.log js/console "player zooming")
-          (assoc game-state
-            :player (assoc player :stride -2)
-            :player-zooming? true
-            ;;:is-zooming? true
-            ;;:zoom-in? false
-            ))
+      (assoc game-state
+        :player (assoc player :stride -2)
+        :player-zooming? true)
       game-state)))
 
 (defn change-level
@@ -323,8 +359,7 @@ after passing through all the other functions.  This implements the game loop.
    If zero enemies are on the board, probability of placing one is increased
    two-fold to avoid long gaps with nothing to do."
   [game-state]
-  (let [;;flipper-fn (macros/dumbtest flipper)
-        flipper-fn (macros/random-enemy-fn flipper)
+  (let [flipper-fn (macros/random-enemy-fn flipper)
         tanker-fn (macros/random-enemy-fn tanker)
         spiker-fn (macros/random-enemy-fn spiker)]
     (->> game-state
@@ -571,15 +606,6 @@ flipper appears to flip 'inside' the level:
      (< newstep 0) 0
      :else newstep)))
 
-(defn test-entity-next-step []
-  (and
-   (= 11 (entity-next-step (build-enemy level 0 :step 10)))
-   (= 6 (entity-next-step (build-projectile level 0 -4 :step 10)))
-   (= 0 (entity-next-step (build-projectile level 0 -4 :step 0)))
-   (= 0 (entity-next-step (build-projectile level 0 -4 :step 2)))
-   (= 100 (entity-next-step (build-projectile level 0 4 :step 100)))
-   (= 100 (entity-next-step (build-projectile level 0 4 :step 98)))))
-
 (defn update-entity-position!
   "Return entity updated with a new position based on its current location and
    stride.  Won't go lower than 0, or higher than the maximum steps of the
@@ -593,12 +619,17 @@ flipper appears to flip 'inside' the level:
   (map update-entity-position! entity-list))
 
 (defn update-entity-direction!
+  "Updates an enemy to travel in the opposite direction if he has reached
+   his maximum allowable step.  This is used for Spikers, which travel
+   back down the level after laying spikes."
   [entity]
   (let [{:keys [step max-step stride]} entity
         newstride (if (>= step max-step) (- stride) stride)]
   (assoc entity :stride newstride)))
 
 (defn update-entity-list-directions
+  "Apply update-entity-direction! to all enemies in the given list that have
+   a maximum step."
   [entity-list]
   (let [{spikers true others false}
         (group-by #(contains? % :max-step) entity-list)]
@@ -700,6 +731,10 @@ flipper appears to flip 'inside' the level:
     (assoc game-state :enemy-list (enemy-list-after-deaths enemy-list))))
 
 (defn enemy-list-after-exiting-spikers
+  "Returns an updated copy of the given list of enemies with spikers removed
+   if they have returned to the innermost edge of the level.  Spikers travel
+   out towards the player a random distance, then turn around and go back in.
+   They disappear when they are all the way in."
   [enemy-list]
   (let [{spikers true others false}
         (group-by #(= (:type %) (EnemyEnum "SPIKER")) enemy-list)]
@@ -713,12 +748,17 @@ flipper appears to flip 'inside' the level:
        (recur enemies (cons enemy enemies-out))))))
 
 (defn handle-exiting-spikers
+  "Apply enemy-list-after-exiting-spikers to the enemy list and update game
+   state.  This removes any spikers that are ready to disappear."
   [game-state]
   (let [enemy-list (:enemy-list game-state)]
     (assoc game-state
       :enemy-list (enemy-list-after-exiting-spikers enemy-list))))
 
 (defn spikes-after-spike-laying
+  "Given a list of spikers and the current length of spikes on each segment,
+   this updates the spike lengths to be longer if a spiker has traveled past
+   the edge of an existing spike.  Returns [enemy-list spikes]"
   [enemy-list spikes]
   (loop [[enemy & enemies] enemy-list
          spikes-out spikes]
@@ -730,6 +770,7 @@ flipper appears to flip 'inside' the level:
      :else (recur enemies spikes-out)))))
      
 (defn handle-spike-laying
+  "Updates the length of spikes on the level.  See spikes-after-spike-laying."
   [game-state]
   (let [enemy-list (:enemy-list game-state)
         spikes (:spikes game-state)
@@ -737,7 +778,8 @@ flipper appears to flip 'inside' the level:
     (assoc game-state :spikes (spikes-after-spike-laying spiker-list spikes))))
 
 (defn kill-tanker-at-top
-  "If the given tanker is at the top of a level, mark it as dead."
+  "If the given tanker is at the top of a level, mark it as dead.  Tankers
+   die when they reach the player, and split into two flippers."
   [tanker]
   (let [step (:step tanker)
         maxstep (:steps (:level tanker))]
@@ -755,6 +797,9 @@ flipper appears to flip 'inside' the level:
       :enemy-list (concat (map kill-tanker-at-top tankers) others))))
 
 (defn mark-player-if-spiked
+  "Marks the player as dead and sets up the animation flags to trigger a
+   level reload if the player has impacted a spike while traveling down the
+   level."
   [game-state]
   (let [{:keys [spikes player]} game-state step (:step player)
         segment (:segment player) spike-len (nth spikes segment)]
@@ -1167,17 +1212,27 @@ The setTimeout fail-over is hard-coded to attempt 30fps.
     (assoc game-state :projectile-list non-collided)))
 
 (defn decrement-spike-length
+  "Returns a new spike length based on the given spike length and the number
+   of times the spike was hit.  Spike is arbitrarily shrunk by 10 steps per
+   hit.  If it falls below a short threshhold (5), it is set to zero."
   [spike-len hit-count]
   (let [new-len (- spike-len (* 10 hit-count))]
     (if (<= new-len 5) 0 new-len)))
 
 (defn filter-spike-bullet-collisions
+  "Given a list of projectiles on a segment (it is mandatory that they all
+   be on the same segment), and the spike length on that segment, returns
+   [projectile-list spike-len], where any projectiles that hit the spike
+   have been removed from projectile-list, and spike-len has been updated
+   to be shorter if it was hit."
   [projectile-list spike-len]
   (let [{hit true missed false}
         (group-by #(<= (:step %) spike-len) projectile-list)]
     [missed (decrement-spike-length spike-len (count hit))]))
     
 (defn remove-spiked-bullets
+  "Returns the game state with any bullets that hit a spike removed, and any
+   spikes that were hit shrunk in length."
   [game-state]
   (let [projectile-list (:projectile-list game-state)
         {player-list false enemy-list true}
@@ -1243,6 +1298,8 @@ The setTimeout fail-over is hard-coded to attempt 30fps.
     (assoc game-state :enemy-list (update-entity-list-positions enemy-list))))
 
 (defn update-enemy-directions
+  "Return game state with any enemies who were ready to turn around marked to
+   travel in the opposite direction."
   [game-state]
   (let [{enemy-list :enemy-list} game-state]
     (assoc game-state :enemy-list (update-entity-list-directions enemy-list))))

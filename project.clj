@@ -1,4 +1,4 @@
-(defproject tempest-cljs "0.1.3-SNAPSHOT"
+(defproject tempest-cljs "0.1.4-SNAPSHOT"
   :description "Clone of Tempest vector-graphic arcade game.
                 Written in ClojureScript, and uses HTML5 2D canvas
                 for display."
