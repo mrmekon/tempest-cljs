@@ -3030,7 +3030,7 @@ net.brehaut.ClojureTools = (function (SH) {
     build_tree: build_tree
   };
 })(SyntaxHighlighter);
-</script><title>tempest-cljs -- Marginalia</title></head><body><table><tr><td class="docs"><div class="header"><h1 class="project-name">tempest-cljs</h1><h2 class="project-version">0.1.3-SNAPSHOT</h2><br /><p>Clone of Tempest vector-graphic arcade game.
+</script><title>tempest-cljs -- Marginalia</title></head><body><table><tr><td class="docs"><div class="header"><h1 class="project-name">tempest-cljs</h1><h2 class="project-version">0.1.4-SNAPSHOT</h2><br /><p>Clone of Tempest vector-graphic arcade game.
                 Written in ClojureScript, and uses HTML5 2D canvas
                 for display.</p>
 </div><div class="dependencies"><h3>dependencies</h3><table><tr><td class="dep-name">org.clojure/clojure</td><td class="dotted"><hr /></td><td class="dep-version">1.3.0</td></tr><tr><td class="dep-name">noir</td><td class="dotted"><hr /></td><td class="dep-version">1.2.1</td></tr></table></div><div class="dependencies"><h3>dev dependencies</h3><table><tr><td class="dep-name">lein-marginalia</td><td class="dotted"><hr /></td><td class="dep-version">0.7.0-SNAPSHOT</td></tr></table></div></td><td class="codes" style="text-align: center; vertical-align: middle;color: #666;padding-right:20px"><br /><br /><br />(this space intentionally left almost blank)</td></tr><tr><td class="docs"><div class="toc"><a name="toc"><h3>namespaces</h3></a><ul><li><a href="#tempest.macros">tempest.macros</a></li><li><a href="#tempest">tempest</a></li><li><a href="#tempest.core">tempest.core</a></li><li><a href="#tempest.draw">tempest.draw</a></li><li><a href="#tempest.levels">tempest.levels</a></li><li><a href="#tempest.path">tempest.path</a></li><li><a href="#tempest.util">tempest.util</a></li></ul></div></td><td class="codes">&nbsp;</td></tr><tr><td class="docs"><div class="docs-header"><a class="anchor" href="#tempest.macros" name="tempest.macros"><h1 class="project-name">tempest.macros</h1><a class="toc-link" href="#toc">toc</a></a></div></td><td class="codes" /></tr><tr><td class="docs"><p>Macros for Tempest, in separate namespace because of ClojureScript
@@ -3042,7 +3042,33 @@ net.brehaut.ClojureTools = (function (SH) {
      (do
        ~@body
        (.log js/console
-             (str &quot;Fn time: &quot; (pr-str (- (goog.now) starttime#)) &quot; ms&quot;)))))</pre></td></tr><tr><td class="spacer docs">&nbsp;</td><td class="codes" /></tr><tr><td class="docs"><div class="docs-header"><a class="anchor" href="#tempest" name="tempest"><h1 class="project-name">tempest</h1><a class="toc-link" href="#toc">toc</a></a></div></td><td class="codes" /></tr><tr><td class="docs"><p>Publicly exported functions to embed Tempest game in HTML.</p>
+             (str &quot;Fn time: &quot; (pr-str (- (goog.now) starttime#)) &quot; ms&quot;)))))</pre></td></tr><tr><td class="docs"><p>Macro that returns a function that generates an enemy of type 'type'
+   randomly.  The returned function should be given the game-state,
+   and it will generate a random number, and create a new enemy of the given
+   type if the random number is under the enemy type's probability and more
+   of the given type of enemy are permitted on the level.</p>
+
+<p>   Calls 'build-TYPE' function to make an enemy, with 'TYPE' replaced by
+   whatever random-enemy-fn was called with.</p>
+
+<p>   Example usage: (let [ffn (random-enemy-fn flipper)] (ffn game-state))</p>
+</td><td class="codes"><pre class="brush: clojure">(defmacro random-enemy-fn
+  [type]
+  `(fn [game-state#]
+    (let [level# (:level game-state#)
+          enemy-list# (:enemy-list game-state#)
+          r# (if (empty? enemy-list#) (/ (rand) 2) (rand))
+          {{more?# (keyword ~(name type))} :remaining
+           {prob# (keyword ~(name type))} :probability
+           segments# :segments} level#]
+      (if (and (&lt;= r# prob#) (pos? more?#))
+        (assoc game-state#
+          :enemy-list (cons (~(symbol (str &quot;build-&quot; (name type)))
+                             level#
+                             (rand-int (count segments#))) enemy-list#)
+          :level (assoc-in level#
+                           [:remaining (keyword ~(name type))] (dec more?#)))
+        game-state#))))</pre></td></tr><tr><td class="spacer docs">&nbsp;</td><td class="codes" /></tr><tr><td class="docs"><div class="docs-header"><a class="anchor" href="#tempest" name="tempest"><h1 class="project-name">tempest</h1><a class="toc-link" href="#toc">toc</a></a></div></td><td class="codes" /></tr><tr><td class="docs"><p>Publicly exported functions to embed Tempest game in HTML.</p>
 </td><td class="codes"><pre class="brush: clojure">(ns 
   tempest
   (:require [tempest.levels :as levels]
@@ -3086,24 +3112,16 @@ in the front center of the ship.</li>
 <h2>TODO:</h2>
 
 <ul>
-<li>Flippers should.. flip.</li>
-<li>Player should be sucked down the level if a flipper touches him</li>
 <li>MOAR ENEMIES</li>
 <li>Jump?  Is that possible with this design?  I think so, easily, by
 scaling just the first, undrawn line of player.  It ends up being
 normal to the segment's top line.</li>
 <li>Power ups.  Bonus points if they're crazy swirly particle things.</li>
-<li>Board colors.  Blue on black is the classic.</li>
-<li>Current segment highlight color</li>
 <li>Browser + keyboard input stuff
-<ul><li>Find appropriate size for canvas.  Maybe there's a way to make it
-"full screen"</li>
-<li>Don't let spacebar scroll the screen, or use a different key</li>
-<li>Any way to change repeat rate?  Probably not</li>
+<ul><li>Any way to change repeat rate?  Probably not</li>
 <li>Any way to use the mouse?</li>
 <li>I'm not above making a custom rotary controller.</li>
 <li>Two keys at the same time?  Gotta swirl-n-shoot.</li></ul></li>
-<li>Offset flat levels up more, instead of displaying them at the bottom.</li>
 <li>Rate-limit bullets</li>
 <li>Frame timing, and disassociate movement speed from framerate.</li>
 </ul>
@@ -3138,6 +3156,24 @@ normal to the segment's top line.</li>
 <p>Functions in this module create the game state, and modify it based on
 player actions or time.  This includes management of entities such as
 the player's ship, enemies, and projectiles.</p>
+
+<p>Enemy types:</p>
+
+<ul>
+<li><strong>Flipper</strong> -- Moves quickly up level, flips randomly to adjacent segments,
+and shoots.  When a flipper reaches the outer edge, he flips endlessly
+back and forth along the perimeter.  If he touches the player, he carries
+the player down the level and the player is dead.</li>
+<li><strong>Tanker</strong> -- Moves slowly, shoots, and never leaves his segment.  If a
+tanker is shot or reaches the outer edge, it is destroyed and two
+flippers flip out of it in opposite directions.</li>
+<li><strong>Spiker</strong> -- Moves quickly, shoots,  and lays a spike on the level where it
+travels.  Spikers cannot change segments.  The spiker turns around when it
+reaches a random point on the level and goes back down, and disappears if
+it reaches the inner edge.  The spike it lays remains, and can be shot.
+If the player kills all the enemies, he must fly down the level and avoid
+hitting any spikes, or he will be killed.</li>
+</ul>
 </td><td class="codes"><pre class="brush: clojure">(ns 
   tempest.core
   (:require [tempest.levels :as levels]
@@ -3147,13 +3183,9 @@ the player's ship, enemies, and projectiles.</p>
             [goog.dom :as dom]
             [goog.events :as events]
             [goog.events.KeyCodes :as key-codes]
-            [clojure.browser.repl :as repl]))</pre></td></tr><tr><td class="docs">
-</td><td class="codes"><pre class="brush: clojure">(repl/connect &quot;http://localhost:9000/repl&quot;)</pre></td></tr><tr><td class="docs"><p>Global queue for storing player's keypresses.  The browser
-        sticks keypresses in this queue via callback, and keys are
-        later pulled out and applied to the game state during the
-        game logic loop.</p>
-</td><td class="codes"><pre class="brush: clojure">(def 
-  *key-event-queue* (atom '()))</pre></td></tr><tr><td class="docs"><hr />
+            [clojure.browser.repl :as repl])
+  (:require-macros [tempest.macros :as macros]))</pre></td></tr><tr><td class="docs">
+</td><td class="codes"><pre class="brush: clojure">(repl/connect &quot;http://localhost:9000/repl&quot;)</pre></td></tr><tr><td class="docs"><hr />
 </td><td class="codes"></td></tr><tr><td class="docs"><p><strong>Main logic loop</strong></p>
 
 <p>Given the current game-state, threads it through a series of functions that
@@ -3163,49 +3195,120 @@ game; it applies all of the logic.</p>
 <p>The last call, schedule-next-frame, schedules this function to be called
 again by the browser sometime in the future with the update game-state
 after passing through all the other functions.  This implements the game loop.</p>
+
+<p>This function actualy dispatches to one of multiple other functions, starting
+with the 'game-logic-' prefix, that actually do the function threading.  This
+is because the game's main loop logic changes based on a few possible states:</p>
+
+<ul>
+<li>Normal, active gameplay is handled by game-logic-playable.  This is the
+longest path, and has to handle all of the gameplay logic, collision
+detection, etc.</li>
+<li>Animation of levels zooming in and out, when first loading or after the
+player dies, are handled by game-logic-non-playable.  Most of the game
+logic is disabled during this stage, as it is primarily displaying a
+non-interactive animation.</li>
+<li>'Shooping' is what I call the end-of-level gameplay, after all enemies are
+defeated, when the player's ship travels down the level and must destroy
+or avoid any spikes remaining.  All of the game logic regarding enemies is
+disabled in this path, but moving and shooting still works.</li>
+<li>The 'Paused' state is an extremely reduced state that only listens for the
+unpause key.</li>
+</ul>
 </td><td class="codes"><pre class="brush: clojure">(defn next-game-state
   [game-state]
-  (if (:is-zooming? game-state)
-    (game-logic-non-playable game-state)
-    (game-logic-playable game-state)))</pre></td></tr><tr><td class="docs"><p>Called by next-game-state when game and player are active.</p>
-</td><td class="codes"><pre class="brush: clojure">(defn game-logic-playable
+  (cond
+   (:paused? game-state) (game-logic-paused game-state)
+   (:player-zooming? game-state)
+   (game-logic-player-shooping-down-level game-state)
+   (and (:is-zooming? game-state))
+   (game-logic-non-playable game-state)
+   :else (game-logic-playable game-state)))</pre></td></tr><tr><td class="docs"><p>Called by next-game-state when game is paused.  Just listens for keypress
+   to unpause game.</p>
+</td><td class="codes"><pre class="brush: clojure">(defn game-logic-paused
   [game-state]
   (-&gt;&gt; game-state
+       dequeue-keypresses-while-paused
+       schedule-next-frame))</pre></td></tr><tr><td class="docs"><p>That's right, I named it that.  This is the game logic path that handles
+   the player 'shooping' down the level, traveling into it, after all enemies
+   have been defeated.  The player can still move and shoot, and can kill or
+   be killed by spikes remaining on the level.</p>
+</td><td class="codes"><pre class="brush: clojure">(defn game-logic-player-shooping-down-level
+  [game-state]
+  (-&gt;&gt; game-state
+       clear-player-segment
        dequeue-keypresses
-       maybe-change-level
+       highlight-player-segment
        clear-frame
        draw-board
-       render-frame
-       remove-collided-entities
-       remove-collided-bullets
+       render-frame       
+       remove-spiked-bullets
        update-projectile-locations
-       update-enemy-locations
-       maybe-enemies-shoot
-       maybe-make-enemy
-       check-if-player-captured
-       update-player-if-shot
-       check-if-enemies-remain
-       update-entity-is-flipping
-       update-entity-flippyness
-       animate-player-capture
+       animate-player-shooping
+       mark-player-if-spiked
+       maybe-change-level
        update-frame-count
-       maybe-render-fps-display
-       schedule-next-frame))</pre></td></tr><tr><td class="docs"><p>Called by next-game-state for non-playable animations.</p>
+       maybe-render-fps-display                 
+       schedule-next-frame))</pre></td></tr><tr><td class="docs"><p>Called by next-game-state when game and player are active.  This logic path
+   handles all the good stuff: drawing the player, drawing the board, enemies,
+   bullets, spikes, movement, player capture, player death, etc.</p>
+</td><td class="codes"><pre class="brush: clojure">(defn game-logic-playable
+  [game-state]
+  (let [gs1 (-&gt;&gt; game-state
+                 clear-player-segment
+                 dequeue-keypresses
+                 highlight-player-segment
+                 maybe-change-level
+                 clear-frame
+                 draw-board
+                 render-frame)
+        gs2 (-&gt;&gt; gs1
+                 remove-spiked-bullets
+                 remove-collided-entities
+                 remove-collided-bullets
+                 update-projectile-locations
+                 update-enemy-locations
+                 update-enemy-directions
+                 maybe-split-tankers
+                 handle-dead-enemies
+                 handle-exiting-spikers
+                 maybe-enemies-shoot)
+        gs3 (-&gt;&gt; gs2
+                 handle-spike-laying
+                 maybe-make-enemy
+                 check-if-player-captured
+                 update-player-if-shot
+                 check-if-enemies-remain
+                 update-entity-is-flipping
+                 update-entity-flippyness
+                 animate-player-capture
+                 update-frame-count
+                 maybe-render-fps-display)]
+    (-&gt;&gt; gs3 schedule-next-frame)))</pre></td></tr><tr><td class="docs"><p>Called by next-game-state for non-playable animations.  This is used when
+   the level is quickly zoomed in or out between stages or after the player
+   dies.  Most of the game logic is disabled during this animation.</p>
 </td><td class="codes"><pre class="brush: clojure">(defn game-logic-non-playable
   [game-state]
   (-&gt;&gt; game-state
+       dequeue-keypresses-while-paused
        clear-frame
        draw-board
        render-frame
        update-frame-count
        maybe-render-fps-display
        schedule-next-frame))</pre></td></tr><tr><td class="docs"><hr />
-</td><td class="codes"></td></tr><tr><td class="docs"><p>Returns an empty game-state map.</p>
+</td><td class="codes"></td></tr><tr><td class="docs"><p>Global queue for storing player's keypresses.  The browser
+        sticks keypresses in this queue via callback, and keys are
+        later pulled out and applied to the game state during the
+        game logic loop.</p>
+</td><td class="codes"><pre class="brush: clojure">(def 
+  *key-event-queue* (atom '()))</pre></td></tr><tr><td class="docs"><p>Returns an empty game-state map.</p>
 </td><td class="codes"><pre class="brush: clojure">(defn build-game-state
   []
   {:enemy-list '()
    :projectile-list '()
    :player '()
+   :spikes []
    :context nil
    :bgcontext nil
    :anim-fn identity
@@ -3219,7 +3322,9 @@ after passing through all the other functions.  This implements the game loop.</
    :zoom-in? true
    :zoom 0.0
    :level-done? false
-   })</pre></td></tr><tr><td class="docs">
+   :player-zooming? false
+   })</pre></td></tr><tr><td class="docs"><p>If no enemies are left on the level, and no enemies remain to be launched
+   mark level as zooming out.</p>
 </td><td class="codes"><pre class="brush: clojure">(defn check-if-enemies-remain
   [game-state]
   (let [level (:level game-state)
@@ -3228,7 +3333,9 @@ after passing through all the other functions.  This implements the game loop.</
         unlaunched (apply + (vals (:remaining level)))
         remaining (+ on-board unlaunched)]
     (if (zero? remaining)
-      (assoc game-state :is-zooming? true :zoom-in? false)
+      (assoc game-state
+        :player (assoc player :stride -2)
+        :player-zooming? true)
       game-state)))</pre></td></tr><tr><td class="docs"><p>Changes current level of game.</p>
 </td><td class="codes"><pre class="brush: clojure">(defn change-level
   [game-state level-idx]
@@ -3241,8 +3348,11 @@ after passing through all the other functions.  This implements the game loop.</
       :zoom-in? true
       :is-zooming? true
       :level-done? false
+      :player-zooming? false
       :projectile-list '()
-      :enemy-list '())))</pre></td></tr><tr><td class="docs">
+      :enemy-list '()
+      :spikes (vec (take (count (:segments level)) (repeat 0))))))</pre></td></tr><tr><td class="docs"><p>Reloads or moves to the next level if player is dead, or if all enemies are
+   dead.</p>
 </td><td class="codes"><pre class="brush: clojure">(defn maybe-change-level
   [game-state]
   (let [player (:player game-state)
@@ -3267,7 +3377,10 @@ after passing through all the other functions.  This implements the game loop.</
    :from-enemy? from-enemy?
    })</pre></td></tr><tr><td class="docs"><p>Enumeration of directions a flipper can be flipping.</p>
 </td><td class="codes"><pre class="brush: clojure">(def 
-  DirectionEnum {&quot;NONE&quot; 0 &quot;CW&quot; 1 &quot;CCW&quot; 2})</pre></td></tr><tr><td class="docs"><p>Given a value from DirectionEnum, return the corresponding string.</p>
+  DirectionEnum {&quot;NONE&quot; 0 &quot;CW&quot; 1 &quot;CCW&quot; 2})</pre></td></tr><tr><td class="docs"><p>Enumeration of types of enemies.</p>
+</td><td class="codes"><pre class="brush: clojure">(def 
+  EnemyEnum {&quot;NONE&quot; 0 &quot;FLIPPER&quot; 1 &quot;TANKER&quot; 2
+             &quot;SPIKER&quot; 3 &quot;FUSEBALL&quot; 4 &quot;PULSAR&quot; 5})</pre></td></tr><tr><td class="docs"><p>Given a value from DirectionEnum, return the corresponding string.</p>
 </td><td class="codes"><pre class="brush: clojure">(defn direction-string-from-value
   [val]
   (first (first (filter #(= 1 (peek %)) (into [] maptest)))))</pre></td></tr><tr><td class="docs"><p>Returns a dictionary describing an enemy on the given level and segment,
@@ -3282,19 +3395,39 @@ after passing through all the other functions.  This implements the game loop.</
    :level level
    :hits-remaining 1
    :path-fn #([])
-   :bounding-fn #(identity 0)
    :flip-dir (DirectionEnum &quot;NONE&quot;)
    :flip-point [0 0]
    :flip-stride 1
    :flip-max-angle 0
    :flip-cur-angle 0
+   :flip-probability 0
    :can-flip false
    :shoot-probability 0
-   })</pre></td></tr><tr><td class="docs"><p>A more specific form of build-enemy for initializing a flipper.</p>
+   :type (EnemyEnum &quot;NONE&quot;)
+   })</pre></td></tr><tr><td class="docs"><p>Returns a new tanker enemy.  Tankers move slowly and do not shoot or flip.</p>
+</td><td class="codes"><pre class="brush: clojure">(defn build-tanker
+  [level seg-idx &amp; {:keys [step] :or {step 0}}]
+  (assoc (build-enemy level seg-idx :step step)
+    :type (EnemyEnum &quot;TANKER&quot;)
+    :path-fn path/tanker-path-on-level
+    :can-flip false
+    :stride 0.2
+    :shoot-probability 0.0))</pre></td></tr><tr><td class="docs"><p>Returns a new spiker enemy.  Spiker cannot change segments, travels quickly,
+   and turns around on a random step, where 20 &lt;= step &lt;= max_step - 20.
+   Spikers can shoot, and they lay spikes behind them as they move.</p>
+</td><td class="codes"><pre class="brush: clojure">(defn build-spiker
+  [level seg-idx &amp; {:keys [step] :or {step 0}}]
+  (assoc (build-enemy level seg-idx :step step)
+    :type (EnemyEnum &quot;SPIKER&quot;)
+    :path-fn path/spiker-path-on-level
+    :can-flip false
+    :stride 1
+    :shoot-probability 0.001
+    :max-step (+ (rand-int (- (:steps level) 40)) 20)))</pre></td></tr><tr><td class="docs"><p>A more specific form of build-enemy for initializing a flipper.</p>
 </td><td class="codes"><pre class="brush: clojure">(defn build-flipper
   [level seg-idx &amp; {:keys [step] :or {step 0}}]
   (assoc (build-enemy level seg-idx :step step)
-    :bounding-fn path/flipper-path-bounding-box
+    :type (EnemyEnum &quot;FLIPPER&quot;)
     :path-fn path/flipper-path-on-level
     :flip-dir (DirectionEnum &quot;NONE&quot;)
     :flip-point [0 0]
@@ -3303,8 +3436,10 @@ after passing through all the other functions.  This implements the game loop.</
     :flip-max-angle 0
     :flip-cur-angle 0
     :flip-permanent-dir nil
+    :flip-probability 0.015
     :can-flip true
-    :shoot-probability 0.005))</pre></td></tr><tr><td class="docs">
+    :shoot-probability 0.004))</pre></td></tr><tr><td class="docs"><p>Returns a new list of active projectiles after randomly adding shots from
+   enemies.</p>
 </td><td class="codes"><pre class="brush: clojure">(defn projectiles-after-shooting
   [enemy-list projectile-list]
   (loop [[enemy &amp; enemies] enemy-list
@@ -3314,7 +3449,8 @@ after passing through all the other functions.  This implements the game loop.</
                  (not= (:step enemy) (:steps (:level enemy)))
                  (pos? (:stride enemy)))
           (recur enemies (add-enemy-projectile projectiles enemy))
-          (recur enemies projectiles)))))</pre></td></tr><tr><td class="docs">
+          (recur enemies projectiles)))))</pre></td></tr><tr><td class="docs"><p>Randomly adds new projectiles coming from enemies based on the enemies'
+   shoot-probability field.  See projectiles-after-shooting.</p>
 </td><td class="codes"><pre class="brush: clojure">(defn maybe-enemies-shoot
   [game-state]
   (let [enemies (:enemy-list game-state)
@@ -3327,21 +3463,13 @@ after passing through all the other functions.  This implements the game loop.</
    two-fold to avoid long gaps with nothing to do.</p>
 </td><td class="codes"><pre class="brush: clojure">(defn maybe-make-enemy
   [game-state]
-  (let [level (:level game-state)
-        segments (count (:segments level))
-        remaining (:remaining level)
-        enemy-list (:enemy-list game-state)
-        r (if (pos? (count enemy-list)) (rand) (/ (rand) 2))]
-    (cond
-     (and (&lt;= r (:flipper (:probability level))) (pos? (:flipper remaining)))
-     (do
-       (assoc game-state
-         :enemy-list (cons (build-flipper level (rand-int segments)) enemy-list)
-         :level (assoc level
-                  :remaining (assoc remaining
-                               :flipper (dec (:flipper remaining))))))
-     :else game-state)))</pre></td></tr><tr><td class="docs"><p>(count (:segments level))</p>
-</td><td class="codes"></td></tr><tr><td class="docs"><p>Returns the angle stride of a flipper, which is how many radians to
+  (let [flipper-fn (macros/random-enemy-fn flipper)
+        tanker-fn (macros/random-enemy-fn tanker)
+        spiker-fn (macros/random-enemy-fn spiker)]
+    (-&gt;&gt; game-state
+         flipper-fn
+         tanker-fn
+         spiker-fn)))</pre></td></tr><tr><td class="docs"><p>Returns the angle stride of a flipper, which is how many radians to
 increment his current flip angle by to be completely flipped onto his
 destination segment (angle of max-angle) on 'steps' number of increments,
 going clockwise if cw? is true, or counter-clockwise otherwise.</p>
@@ -3426,7 +3554,16 @@ max-angle is less than zero.</li>
         new-dir (if (= (DirectionEnum &quot;CW&quot;) cur-dir)
                   (DirectionEnum &quot;CCW&quot;)
                   (DirectionEnum &quot;CW&quot;))]
-    (assoc flipper :flip-permanent-dir new-dir)))</pre></td></tr><tr><td class="docs"><p>Given a flipper, returns the flipper possibly modified to be in a state
+    (assoc flipper :flip-permanent-dir new-dir)))</pre></td></tr><tr><td class="docs"><p>Mark flipper as flipping in given direction, unless no segment is in
+   that direction.</p>
+</td><td class="codes"><pre class="brush: clojure">(defn engage-flipping
+  [flipper flip-dir]
+  (let [flip-seg-idx (segment-for-flip-direction flipper flip-dir)
+        cw? (= flip-dir (DirectionEnum &quot;CW&quot;))]
+    (if (not= flip-seg-idx (:segment flipper))
+      (mark-flipper-for-flipping flipper flip-dir
+                                 flip-seg-idx cw?)
+      flipper)))</pre></td></tr><tr><td class="docs"><p>Given a flipper, returns the flipper possibly modified to be in a state
    of flipping to another segment.  This will always be true if the flipper
    is on the outermost edge of the level, and will randomly be true if it
    has not reached the edge.</p>
@@ -3434,12 +3571,9 @@ max-angle is less than zero.</li>
   [flipper]
   (let [should-flip (and
                      (true? (:can-flip flipper))
-                     (or
-                      (= (:step flipper) 50)
-                      (= (:step flipper) 100)
-                      (= (:step flipper) 150)
-                      (= (:step flipper) 200))
-                     (= (:flip-dir flipper) (DirectionEnum &quot;NONE&quot;)))
+                     (= (:flip-dir flipper) (DirectionEnum &quot;NONE&quot;))
+                     (or (&lt;= (rand) (:flip-probability flipper))
+                         (= (:step flipper) (:steps (:level flipper)))))
         permanent-dir (:flip-permanent-dir flipper)
         flip-dir (or permanent-dir (random-direction))
         flip-seg-idx (segment-for-flip-direction flipper flip-dir)
@@ -3536,34 +3670,28 @@ max-angle is less than zero.</li>
     (cond
      (&gt; newstep maxstep) maxstep
      (&lt; newstep 0) 0
-     :else newstep)))</pre></td></tr><tr><td class="docs">
-</td><td class="codes"><pre class="brush: clojure">(defn test-entity-next-step []
-  (and
-   (= 11 (entity-next-step (build-enemy level 0 :step 10)))
-   (= 6 (entity-next-step (build-projectile level 0 -4 :step 10)))
-   (= 0 (entity-next-step (build-projectile level 0 -4 :step 0)))
-   (= 0 (entity-next-step (build-projectile level 0 -4 :step 2)))
-   (= 100 (entity-next-step (build-projectile level 0 4 :step 100)))
-   (= 100 (entity-next-step (build-projectile level 0 4 :step 98)))))</pre></td></tr><tr><td class="docs"><p>Return entity updated with a new position based on its current location and
+     :else newstep)))</pre></td></tr><tr><td class="docs"><p>Return entity updated with a new position based on its current location and
    stride.  Won't go lower than 0, or higher than the maximum steps of the
    level.</p>
 </td><td class="codes"><pre class="brush: clojure">(defn update-entity-position!
   [entity]
-  (assoc entity :step (entity-next-step entity)))</pre></td></tr><tr><td class="docs">
-</td><td class="codes"><pre class="brush: clojure">(defn test-update-entity-position! []
-  (and 
-   (= 11 (:step (update-entity-position! (build-enemy level 0 :step 10))))
-   (= 5 (:step (update-entity-position!
-                (build-projectile level 0 -5 :step 10))))
-   (= 15 (:step (update-entity-position!
-                (build-projectile level 0 5 :step 10))))
-   (= 0 (:step (update-entity-position!
-                (build-projectile level 0 -5 :step 0))))
-   (= 100 (:step (update-entity-position!
-                  (build-projectile level 0 5 :step 100))))))</pre></td></tr><tr><td class="docs"><p>Call update-entity-position! on all entities in list.</p>
-</td><td class="codes"><pre class="brush: clojure">(defn update-entity-list
+  (assoc entity :step (entity-next-step entity)))</pre></td></tr><tr><td class="docs"><p>Call update-entity-position! on all entities in list.</p>
+</td><td class="codes"><pre class="brush: clojure">(defn update-entity-list-positions
   [entity-list]
-  (map update-entity-position! entity-list))</pre></td></tr><tr><td class="docs"><p>Returns true of entity is on seg-idx, and between steps step0 and step1,
+  (map update-entity-position! entity-list))</pre></td></tr><tr><td class="docs"><p>Updates an enemy to travel in the opposite direction if he has reached
+   his maximum allowable step.  This is used for Spikers, which travel
+   back down the level after laying spikes.</p>
+</td><td class="codes"><pre class="brush: clojure">(defn update-entity-direction!
+  [entity]
+  (let [{:keys [step max-step stride]} entity
+        newstride (if (&gt;= step max-step) (- stride) stride)]
+  (assoc entity :stride newstride)))</pre></td></tr><tr><td class="docs"><p>Apply update-entity-direction! to all enemies in the given list that have
+   a maximum step.</p>
+</td><td class="codes"><pre class="brush: clojure">(defn update-entity-list-directions
+  [entity-list]
+  (let [{spikers true others false}
+        (group-by #(contains? % :max-step) entity-list)]
+    (concat others (map update-entity-direction! spikers))))</pre></td></tr><tr><td class="docs"><p>Returns true of entity is on seg-idx, and between steps step0 and step1,
    inclusive.</p>
 </td><td class="codes"><pre class="brush: clojure">(defn entity-between-steps
   [seg-idx step0 step1 entity]
@@ -3572,16 +3700,11 @@ max-angle is less than zero.</li>
     (and
      (= (:damage-segment entity) seg-idx)
      (&gt;= (:step entity) min)
-     (&lt;= (:step entity) max))))</pre></td></tr><tr><td class="docs">
-</td><td class="codes"><pre class="brush: clojure">(defn test-entity-between-steps []
-  (and
-   (true? (entity-between-steps 0 0 10 (build-enemy level 0 :step 5)))
-   (false? (entity-between-steps 0 0 10 (build-enemy level 0 :step 15)))
-   (false? (entity-between-steps 0 0 10 (build-enemy level 1 :step 5)))
-   (false? (entity-between-steps 5 10 20 (build-enemy level 5 :step 5)))
-   (true? (entity-between-steps 5 10 20 (build-enemy level 5 :step 15)))))</pre></td></tr><tr><td class="docs"><p>Given an entity and a list of projectiles, returns the entity and updated
+     (&lt;= (:step entity) max))))</pre></td></tr><tr><td class="docs"><p>Given an entity and a list of projectiles, returns the entity and updated
    list of projectiles after collisions.  The entity's hits-remaining counter
-   is decremented on a collision, and the projectile is removed.</p>
+   is decremented on a collision, and the projectile is removed.  Small amount
+   of fudge factor (1 step += actual projectile location) to avoid narrow
+   misses in the collision algorithm.</p>
 </td><td class="codes"><pre class="brush: clojure">(defn projectiles-after-collision
   [entity projectile-list]
   ((fn [entity projectiles-in projectiles-out was-hit?]
@@ -3590,8 +3713,8 @@ max-angle is less than zero.</li>
        (let [bullet (first projectiles-in)
              collision? (entity-between-steps
                          (:segment bullet)
-                         (:step bullet)
-                         (entity-next-step bullet)
+                         (inc (:step bullet))
+                         (dec (entity-next-step bullet))
                          entity)]
          (if (and (not (:from-enemy? bullet)) collision?)
            (recur (decrement-enemy-hits entity)
@@ -3602,24 +3725,7 @@ max-angle is less than zero.</li>
                   (rest projectiles-in)
                   (cons bullet projectiles-out)
                   was-hit?)))))
-   entity projectile-list '() false))</pre></td></tr><tr><td class="docs">
-</td><td class="codes"><pre class="brush: clojure">(defn test-projectiles-after-collision []
-  (let [level (get levels/*levels* 4)
-        projectiles (list (build-projectile level 0 -1 :step 9)
-                          (build-projectile level 0 -5 :step 9)
-                          (build-projectile level 0 1 :step 9)
-                          (build-projectile level 0 2 :step 9)
-                          (build-projectile level 0 5 :step 20)
-                          (build-projectile level 5 2 :step 9))
-        result (projectiles-after-collision
-                (build-enemy level 0 :step 10)
-                projectiles)]
-    (println (str &quot;Projectiles: &quot;
-                  (pr-str (count (:projectiles result)))
-                  &quot; of &quot;
-                  (pr-str (count projectiles))))
-    (println (str &quot;Hits left: &quot; (pr-str (:hits-remaining (:entity result)))))
-    (println (str &quot;Was hit: &quot; (pr-str (:was-hit? result))))))</pre></td></tr><tr><td class="docs"><p>Given a list of entities and a list of projectiles, returns the lists
+   entity projectile-list '() false))</pre></td></tr><tr><td class="docs"><p>Given a list of entities and a list of projectiles, returns the lists
    with entity hit counts updated, entities removed if they have no hits
    remaining, and collided projectiles removed.</p>
 
@@ -3633,86 +3739,200 @@ max-angle is less than zero.</li>
        (let [{entity :entity projectiles :projectiles was-hit? :was-hit?}
              (projectiles-after-collision (first entities-in)
                                           projectiles-in)]
-         (if (and was-hit? (&lt;= (:hits-remaining entity) 0))
-           (recur (rest entities-in)
-                  entities-out
-                  projectiles)
            (recur (rest entities-in)
                   (cons entity entities-out)
-                  projectiles)))))
-   entity-list '() projectile-list))</pre></td></tr><tr><td class="docs">
-</td><td class="codes"><pre class="brush: clojure">(defn test-entities-after-collisions []
-  (let [level (get levels/*levels* 4)
-        enemies (list (build-enemy level 0 :step 10)
-                      (build-enemy level 1 :step 20)
-                      (build-enemy level 2 :step 30)
-                      (build-enemy level 3 :step 40)
-                      (build-enemy level 4 :step 50)
-                      (build-enemy level 5 :step 60))
-        projectiles (list (build-projectile level 0 -5 :step 9)
-                          (build-projectile level 0 5 :step 9)
-                          (build-projectile level 1 -5 :step 19)
-                          (build-projectile level 1 5 :step 19)
-                          (build-projectile level 3 -5 :step 35)
-                          (build-projectile level 3 5 :step 35))
-        result (entities-after-collisions enemies projectiles)]
-    (println (str &quot;Entities: &quot;
-                  (pr-str (count (:entities result)))
-                  &quot; of &quot;
-                  (pr-str (count enemies))))
-    (println (str &quot;Projectiles: &quot;
-                  (pr-str (count (:projectiles result)))
-                  &quot; of &quot;
-                  (pr-str (count projectiles))))))</pre></td></tr><tr><td class="docs"><p>Updates player's position on board while player is in the process of being
+                  projectiles))))
+   entity-list '() projectile-list))</pre></td></tr><tr><td class="docs"><p>Spawns two new flippers from one tanker.  These flippers are automatically
+   set to be flipping to the segments surround the tanker, unless one of the
+   directions is blocked, in which case that flipper just stays on the tanker's
+   segment.</p>
+</td><td class="codes"><pre class="brush: clojure">(defn new-flippers-from-tanker
+  [enemy]
+  (let [{:keys [segment level step]} enemy]
+    (list
+     (engage-flipping
+      (build-flipper level segment :step step)
+      (DirectionEnum &quot;CW&quot;))
+     (engage-flipping
+      (build-flipper level segment :step step)
+      (DirectionEnum &quot;CCW&quot;)))))</pre></td></tr><tr><td class="docs"><p>Returns the enemy list updated for deaths.  This means removing enemies
+   that died, and possibly adding new enemies for those that spawn children
+   on death.</p>
+</td><td class="codes"><pre class="brush: clojure">(defn enemy-list-after-deaths
+  [enemy-list]
+  (let [{live-enemies false dead-enemies true}
+        (group-by #(zero? (:hits-remaining %)) enemy-list)]
+    (loop [[enemy &amp; enemies] dead-enemies
+           enemies-out '()]
+      (cond
+       (nil? enemy) (concat live-enemies enemies-out)
+       (= (:type enemy) (EnemyEnum &quot;TANKER&quot;))
+       (recur enemies (concat (new-flippers-from-tanker enemy) enemies-out))
+       :else (recur enemies enemies-out)))))</pre></td></tr><tr><td class="docs"><p>Return game state after handling dead enemies, by removing them and possibly
+   replacing them with children.</p>
+</td><td class="codes"><pre class="brush: clojure">(defn handle-dead-enemies
+  [game-state]
+  (let [enemy-list (:enemy-list game-state)]
+    (assoc game-state :enemy-list (enemy-list-after-deaths enemy-list))))</pre></td></tr><tr><td class="docs"><p>Returns an updated copy of the given list of enemies with spikers removed
+   if they have returned to the innermost edge of the level.  Spikers travel
+   out towards the player a random distance, then turn around and go back in.
+   They disappear when they are all the way in.</p>
+</td><td class="codes"><pre class="brush: clojure">(defn enemy-list-after-exiting-spikers
+  [enemy-list]
+  (let [{spikers true others false}
+        (group-by #(= (:type %) (EnemyEnum &quot;SPIKER&quot;)) enemy-list)]
+    (loop [[enemy &amp; enemies] spikers
+           enemies-out '()]
+      (cond
+       (nil? enemy) (concat others enemies-out)
+       (and (neg? (:stride enemy)) (zero? (:step enemy)))
+       (recur enemies enemies-out)
+       :else
+       (recur enemies (cons enemy enemies-out))))))</pre></td></tr><tr><td class="docs"><p>Apply enemy-list-after-exiting-spikers to the enemy list and update game
+   state.  This removes any spikers that are ready to disappear.</p>
+</td><td class="codes"><pre class="brush: clojure">(defn handle-exiting-spikers
+  [game-state]
+  (let [enemy-list (:enemy-list game-state)]
+    (assoc game-state
+      :enemy-list (enemy-list-after-exiting-spikers enemy-list))))</pre></td></tr><tr><td class="docs"><p>Given a list of spikers and the current length of spikes on each segment,
+   this updates the spike lengths to be longer if a spiker has traveled past
+   the edge of an existing spike.  Returns [enemy-list spikes]</p>
+</td><td class="codes"><pre class="brush: clojure">(defn spikes-after-spike-laying
+  [enemy-list spikes]
+  (loop [[enemy &amp; enemies] enemy-list
+         spikes-out spikes]
+    (let [{:keys [step segment]} enemy
+          spike-step (nth spikes-out segment)]
+    (cond
+     (nil? enemy) spikes-out
+     (&gt;= step spike-step) (recur enemies (assoc spikes-out segment step))
+     :else (recur enemies spikes-out)))))</pre></td></tr><tr><td class="docs"><p>Updates the length of spikes on the level.  See spikes-after-spike-laying.</p>
+</td><td class="codes"><pre class="brush: clojure">(defn handle-spike-laying
+  [game-state]
+  (let [enemy-list (:enemy-list game-state)
+        spikes (:spikes game-state)
+        spiker-list (filter #(= (:type %) (EnemyEnum &quot;SPIKER&quot;)) enemy-list)]
+    (assoc game-state :spikes (spikes-after-spike-laying spiker-list spikes))))</pre></td></tr><tr><td class="docs"><p>If the given tanker is at the top of a level, mark it as dead.  Tankers
+   die when they reach the player, and split into two flippers.</p>
+</td><td class="codes"><pre class="brush: clojure">(defn kill-tanker-at-top
+  [tanker]
+  (let [step (:step tanker)
+        maxstep (:steps (:level tanker))]
+    (if (= step maxstep)
+      (assoc tanker :hits-remaining 0)
+      tanker)))</pre></td></tr><tr><td class="docs"><p>Marks tankers at the top of the level as ready to split into flippers.</p>
+</td><td class="codes"><pre class="brush: clojure">(defn maybe-split-tankers
+  [game-state]
+  (let [enemy-list (:enemy-list game-state)
+        {tankers true others false}
+        (group-by #(= (:type %) (EnemyEnum &quot;TANKER&quot;)) enemy-list)]
+    (assoc game-state
+      :enemy-list (concat (map kill-tanker-at-top tankers) others))))</pre></td></tr><tr><td class="docs"><p>Marks the player as dead and sets up the animation flags to trigger a
+   level reload if the player has impacted a spike while traveling down the
+   level.</p>
+</td><td class="codes"><pre class="brush: clojure">(defn mark-player-if-spiked
+  [game-state]
+  (let [{:keys [spikes player]} game-state step (:step player)
+        segment (:segment player) spike-len (nth spikes segment)]
+    (cond
+     (zero? spike-len) game-state
+     (&lt;= step spike-len)
+     (assoc game-state
+       :player (assoc player :is-dead? true)
+       :is-zooming? true
+       :zoom-in? false
+       :player-zooming? false)
+     :else game-state)))</pre></td></tr><tr><td class="docs"><p>Updates the player's position as he travels ('shoops') down the level after
+   defeating all enemies.  Player moves relatively slowly.  Camera zooms in
+   (actually, level zooms out) a little slower than the player moves.  After
+   player reaches bottom, camera zooms faster.  Level marked as finished when
+   zoom level is very high (10x normal).</p>
+</td><td class="codes"><pre class="brush: clojure">(defn animate-player-shooping
+  [game-state]
+  (let [player (:player game-state)
+        level (:level game-state)
+        zoom (:zoom game-state)]
+    (cond
+     (:level-done? game-state) game-state
+     (&gt;= zoom 10) (assoc game-state :level-done? true)
+     (zero? (:step player)) (assoc game-state :zoom (+ zoom .2))
+     :else (assoc game-state
+             :player (update-entity-position! player)
+             :zoom (+ 1 (/ (- (:steps level) (:step player)) 150))
+             :is-zooming? true
+             :zoom-in? false))))</pre></td></tr><tr><td class="docs"><p>Updates player's position on board while player is in the process of being
    captured by an enemy, and marks player as dead when he reaches the inner
    boundary of the level.  When player dies, level zoom-out is initiated.</p>
 </td><td class="codes"><pre class="brush: clojure">(defn animate-player-capture
-  [global-state]
-  (let [player (:player global-state)
+  [game-state]
+  (let [player (:player game-state)
         captured? (:captured? player)
         isdead? (zero? (:step player))]
     (cond
-     (false? captured?) global-state
-     (true? isdead?) (assoc global-state
+     (false? captured?) game-state
+     (true? isdead?) (assoc (clear-level-entities game-state)
                        :player (assoc player :is-dead? true)
-                       :enemy-list '()
-                       :projectile-list '()
                        :is-zooming? true
                        :zoom-in? false)
-     :else  (assoc global-state :player (update-entity-position! player)))))</pre></td></tr><tr><td class="docs"><p>Updates current zoom value of the level, based on direction of :zoom-in?
-   in the global-state.  This is used to animate the board zooming in or
+     :else (assoc game-state :player (update-entity-position! player)))))</pre></td></tr><tr><td class="docs"><p>Clears enemies, projectiles, and spikes from level.</p>
+</td><td class="codes"><pre class="brush: clojure">(defn clear-level-entities
+  [game-state]
+  (assoc game-state
+    :enemy-list '()
+    :projectile-list '()
+    :spikes []))</pre></td></tr><tr><td class="docs"><p>Updates current zoom value of the level, based on direction of :zoom-in?
+   in the game-state.  This is used to animate the board zooming in or
    zooming out at the start or end of a round.  If this was a zoom out, and
    it's finished, mark the level as done so it can restart.</p>
 </td><td class="codes"><pre class="brush: clojure">(defn update-zoom
-  [global-state]
-  (let [zoom (:zoom global-state)
-        zoom-in? (:zoom-in? global-state)
+  [game-state]
+  (let [zoom (:zoom game-state)
+        zoom-in? (:zoom-in? game-state)
         zoom-step 0.04
         newzoom (if zoom-in? (+ zoom zoom-step) (- zoom zoom-step))
         target (if zoom-in? 1.0 0.0)
         cmp (if zoom-in? &gt;= &lt;=)]
-    (if (cmp zoom target) (assoc global-state
+    (if (cmp zoom target) (assoc game-state
                             :is-zooming? false
                             :level-done? (not zoom-in?))
         (if (cmp newzoom target)
-          (assoc global-state :zoom target)
-          (assoc global-state :zoom newzoom)))))</pre></td></tr><tr><td class="docs"><p>Draws the level when level is zooming in or out, and updates the zoom level.
+          (assoc game-state :zoom target)
+          (assoc game-state :zoom newzoom)))))</pre></td></tr><tr><td class="docs"><p>Returns game-state unchanged, and as a side affect clears the player's
+   current segment back to blue.  To avoid weird color mixing, it is cleared
+   to black first (2px wide), then redrawn as blue (1.5px wide).  This looks
+   right, but is different from how the board is drawn when done all at once.</p>
+</td><td class="codes"><pre class="brush: clojure">(defn clear-player-segment
+  [game-state]
+  (do
+    (set! (. (:bgcontext game-state) -lineWidth) 2)
+    (draw/draw-player-segment game-state {:r 0 :g 0 :b 0})
+    (set! (. (:bgcontext game-state) -lineWidth) 1.5)
+    (draw/draw-player-segment game-state {:r 10 :g 10 :b 100})
+    game-state))</pre></td></tr><tr><td class="docs"><p>Returns game-state unchanged, and as a side effect draws the player's
+   current segment with a yellow border.</p>
+</td><td class="codes"><pre class="brush: clojure">(defn highlight-player-segment
+  [game-state]
+  (do
+    (set! (. (:bgcontext game-state) -lineWidth) 1)
+    (draw/draw-player-segment game-state {:r 150 :g 150 :b 15})
+    game-state))</pre></td></tr><tr><td class="docs"><p>Draws the level when level is zooming in or out, and updates the zoom level.
    This doesn't redraw the board normally, since the board is drawn on a
    different HTML5 canvas than the players for efficiency.</p>
 </td><td class="codes"><pre class="brush: clojure">(defn draw-board
-  [global-state]
-  (let [is-zooming? (:is-zooming? global-state)
-        zoom (:zoom global-state)
-        {width :width height :height} (:dims global-state)]
+  [game-state]
+  (let [is-zooming? (:is-zooming? game-state)
+        zoom (:zoom game-state)
+        {width :width height :height} (:dims game-state)]
     (if is-zooming?
       (do
-        (draw/clear-context (:bgcontext global-state) (:dims global-state))
-        (draw/draw-board (:bgcontext global-state)
-                         {:width (/ width zoom) :height (/ height zoom)}
-                         (:level global-state)
-                         zoom)
-        (update-zoom global-state))
-        global-state)))</pre></td></tr><tr><td class="docs"><p>Returns map with keys true and false.  Values under true key have or
+        (draw/clear-context (:bgcontext game-state) (:dims game-state))
+        (draw/draw-board (assoc game-state
+                           :dims {:width (/ width zoom)
+                                  :height (/ height zoom)}))
+        (if (:player-zooming? game-state)
+          game-state
+          (update-zoom game-state)))
+        game-state)))</pre></td></tr><tr><td class="docs"><p>Returns map with keys true and false.  Values under true key have or
    will collide with bullet in the next bullet update.  Values under the
    false key will not.</p>
 </td><td class="codes"><pre class="brush: clojure">(defn collisions-with-projectile
@@ -3777,7 +3997,25 @@ max-angle is less than zero.</li>
   (let [key (.-keyCode event)]
     (swap! *key-event-queue* #(concat % [key]))
     (.preventDefault event)
-    (.stopPropagation event)))</pre></td></tr><tr><td class="docs"><p>Returns new game state updated to reflect the results of a player's
+    (.stopPropagation event)))</pre></td></tr><tr><td class="docs"><p>See dequeue-keypresses for details.  This unqueues all keypresses, but only
+   responds to unpause.</p>
+</td><td class="codes"><pre class="brush: clojure">(defn dequeue-keypresses-while-paused
+  [game-state]
+  (loop [state game-state
+         queue @*key-event-queue*]
+    (if (empty? queue)
+      state
+      (let [key (first queue)
+            valid? (compare-and-set! *key-event-queue* queue (rest queue))]
+        (if valid?
+          (recur (handle-keypress-unpause state key) @*key-event-queue*)
+          (recur state @*key-event-queue*))))))</pre></td></tr><tr><td class="docs"><p>See handle-keypress.  This version only accepts unpause.</p>
+</td><td class="codes"><pre class="brush: clojure">(defn handle-keypress-unpause
+  [game-state key]
+  (let [paused? (:paused? game-state)]
+    (condp = key
+      key-codes/ESC (assoc game-state :paused? (not paused?))
+      game-state)))</pre></td></tr><tr><td class="docs"><p>Returns new game state updated to reflect the results of a player's
    keypress.</p>
 
 <p>   ## Key map</p>
@@ -3799,16 +4037,10 @@ max-angle is less than zero.</li>
       key-codes/LEFT  (assoc game-state
                         :player
                         (assoc player :segment (segment-entity-cw player)))
-      key-codes/UP (assoc game-state
-                        :player
-                        (assoc player :step (- (:step player) 10)))
-      key-codes/DOWN (assoc game-state
-                        :player
-                        (assoc player :step (+ (:step player) 10)))
       key-codes/SPACE (assoc game-state
                         :projectile-list
                         (add-player-projectile projectile-list player))
-      key-codes/ESC (assoc game-state (not paused?))
+      key-codes/ESC (assoc game-state :paused? (not paused?))
       game-state)))</pre></td></tr><tr><td class="docs"><p>Atomically dequeue keypresses from global queue and pass to handle-keypress,
 until global queue is empty.  Returns game state updated after applying
 all keypresses.</p>
@@ -3831,9 +4063,13 @@ again with the current deref of the global state.</p>
       state
       (let [key (first queue)
             valid? (compare-and-set! *key-event-queue* queue (rest queue))]
-        (if (and valid? (not (:captured? (:player game-state))))
-          (recur (handle-keypress state key) @*key-event-queue*)
-          (recur state @*key-event-queue*))))))</pre></td></tr><tr><td class="docs"><p>Returns a callable javascript function to schedule a frame to be drawn.
+        (cond
+         (not valid?) (recur state @*key-event-queue*)
+         (not (:captured? (:player game-state))) (recur (handle-keypress
+                                                         state
+                                                         key)
+                                                        @*key-event-queue*)
+         :else (recur (handle-keypress-unpause state key) @*key-event-queue*))))))</pre></td></tr><tr><td class="docs"><p>Returns a callable javascript function to schedule a frame to be drawn.
 Tries to use requestAnimationFrame, or the browser-specific version of
 it that is available.  Falls back on setTimeout if requestAnimationFrame
 is not available on player's browser.</p>
@@ -3873,16 +4109,25 @@ on how long frame takes to render.</p>
          player :player}
         game-state
         {enemy-shots true player-shots false}
-        (group-by :from-enemy? projectile-list)]
+        (group-by :from-enemy? projectile-list)
+        zoom (:zoom game-state)
+        zoom-dims {:width (/ (:width dims) zoom)
+                   :height (/ (:height dims) zoom)}]
+    (draw/draw-all-spikes (assoc game-state :dims zoom-dims))
     (if (not (:is-dead? player))
-      (draw/draw-player context dims level player))
-    (draw/draw-entities context dims level enemy-list {:r 150 :g 10 :b 10})
-    (draw/draw-entities context dims level
+      (draw/draw-player context zoom-dims level player (:zoom game-state)))
+    (draw/draw-entities context zoom-dims level
+                        enemy-list
+                        {:r 150 :g 10 :b 10}
+                        zoom)
+    (draw/draw-entities context zoom-dims level
                         player-shots
-                        {:r 255 :g 255 :b 255})
-    (draw/draw-entities context dims level
+                        {:r 255 :g 255 :b 255}
+                        zoom)
+    (draw/draw-entities context zoom-dims level
                         enemy-shots
-                        {:r 150 :g 15 :b 150})
+                        {:r 150 :g 15 :b 150}
+                        zoom)
     game-state))</pre></td></tr><tr><td class="docs"><p>Detects and removes projectiles that have collided with enemies, and enemies
    whose hit counts have dropped to zero.  Returns updated game-state.</p>
 </td><td class="codes"><pre class="brush: clojure">(defn remove-collided-entities
@@ -3930,7 +4175,43 @@ on how long frame takes to render.</p>
   (let [projectile-list (:projectile-list game-state)
         segment-lists (vals (group-by :segment projectile-list))
         non-collided (mapcat projectile-list-without-collisions segment-lists)]
-    (assoc game-state :projectile-list non-collided)))</pre></td></tr><tr><td class="docs"><p>Returns true given bullet will hit the given player.</p>
+    (assoc game-state :projectile-list non-collided)))</pre></td></tr><tr><td class="docs"><p>Returns a new spike length based on the given spike length and the number
+   of times the spike was hit.  Spike is arbitrarily shrunk by 10 steps per
+   hit.  If it falls below a short threshhold (5), it is set to zero.</p>
+</td><td class="codes"><pre class="brush: clojure">(defn decrement-spike-length
+  [spike-len hit-count]
+  (let [new-len (- spike-len (* 10 hit-count))]
+    (if (&lt;= new-len 5) 0 new-len)))</pre></td></tr><tr><td class="docs"><p>Given a list of projectiles on a segment (it is mandatory that they all
+   be on the same segment), and the spike length on that segment, returns
+   [projectile-list spike-len], where any projectiles that hit the spike
+   have been removed from projectile-list, and spike-len has been updated
+   to be shorter if it was hit.</p>
+</td><td class="codes"><pre class="brush: clojure">(defn filter-spike-bullet-collisions
+  [projectile-list spike-len]
+  (let [{hit true missed false}
+        (group-by #(&lt;= (:step %) spike-len) projectile-list)]
+    [missed (decrement-spike-length spike-len (count hit))]))</pre></td></tr><tr><td class="docs"><p>Returns the game state with any bullets that hit a spike removed, and any
+   spikes that were hit shrunk in length.</p>
+</td><td class="codes"><pre class="brush: clojure">(defn remove-spiked-bullets
+  [game-state]
+  (let [projectile-list (:projectile-list game-state)
+        {player-list false enemy-list true}
+        (group-by :from-enemy? projectile-list)
+        segmented-projectiles (group-by :segment player-list)]
+    (loop [[seg-bullets &amp; remaining] segmented-projectiles
+           spikes (:spikes game-state)
+           projectiles-out '()]
+      (if (nil? seg-bullets)
+        (assoc game-state
+          :projectile-list (concat projectiles-out enemy-list)
+          :spikes spikes)
+        (let [[key bullets] seg-bullets
+              spike-len (nth spikes key)
+              [bullets new-len] (filter-spike-bullet-collisions bullets
+                                                                spike-len)]
+          (recur remaining
+                 (assoc spikes key new-len)
+                 (concat projectiles-out bullets)))))))</pre></td></tr><tr><td class="docs"><p>Returns true given bullet will hit the given player.</p>
 </td><td class="codes"><pre class="brush: clojure">(defn bullets-will-kill-player?
   [player bullet]
   (let [next-step (entity-next-step bullet)
@@ -3946,11 +4227,9 @@ on how long frame takes to render.</p>
                                #(bullets-will-kill-player? player %)
                                on-segment)]
     (if-not (empty? hit)
-      (assoc game-state
+      (assoc (clear-level-entities game-state)
         :player (assoc player :is-dead? true)
         :is-zooming? true
-        :enemy-list '()
-        :projectile-list '()
         :zoom-in? false)
       game-state)))</pre></td></tr><tr><td class="docs"><p>Returns game-state with all projectiles updated to have new positions
    based on their speeds and current position.</p>
@@ -3960,13 +4239,18 @@ on how long frame takes to render.</p>
         rm-fn (partial remove projectile-off-level?)]
     (assoc game-state
       :projectile-list (-&gt; projectile-list
-                           update-entity-list
+                           update-entity-list-positions
                            rm-fn))))</pre></td></tr><tr><td class="docs"><p>Returns game-state with all of the enemies updated to have new positions
    based on their speeds and current position.</p>
 </td><td class="codes"><pre class="brush: clojure">(defn update-enemy-locations
   [game-state]
   (let [{enemy-list :enemy-list} game-state]
-    (assoc game-state :enemy-list (update-entity-list enemy-list))))</pre></td></tr><tr><td class="docs"><p>Tells the player's browser to schedule the next frame to be drawn, using
+    (assoc game-state :enemy-list (update-entity-list-positions enemy-list))))</pre></td></tr><tr><td class="docs"><p>Return game state with any enemies who were ready to turn around marked to
+   travel in the opposite direction.</p>
+</td><td class="codes"><pre class="brush: clojure">(defn update-enemy-directions
+  [game-state]
+  (let [{enemy-list :enemy-list} game-state]
+    (assoc game-state :enemy-list (update-entity-list-directions enemy-list))))</pre></td></tr><tr><td class="docs"><p>Tells the player's browser to schedule the next frame to be drawn, using
    whatever the best mechanism the browser has to do so.</p>
 </td><td class="codes"><pre class="brush: clojure">(defn schedule-next-frame
   [game-state]
@@ -4076,9 +4360,13 @@ level functions to draw complete game entities using the primitives.</p>
    an HTML5 canvas, with :height and :width specified in dims, and on the
    given level.</p>
 </td><td class="codes"><pre class="brush: clojure">(defn draw-player
-  [context dims level player]
+  [context dims level player zoom]
   (doseq []
+    (.save context)
     (.beginPath context)
+    (if (zero? zoom)
+      (.scale context 0.00001 0.0001)
+      (.scale context zoom zoom))
     (set! (. context -strokeStyle) (str &quot;rgb(255,255,0)&quot;))
     (draw-path context
                (path/polar-to-cartesian-centered
@@ -4086,13 +4374,18 @@ level functions to draw complete game entities using the primitives.</p>
                 dims)
                (path/round-path (path/player-path-on-level player))
                true)
-    (.closePath context)))</pre></td></tr><tr><td class="docs"><p>Draws all the entities, defined by paths in 'entity-list', on the 2D context
+    (.closePath context)
+    (.restore context)))</pre></td></tr><tr><td class="docs"><p>Draws all the entities, defined by paths in 'entity-list', on the 2D context
    of an HTML5 canvas, with :height and :width specified in dims, and on the
    given level.</p>
 </td><td class="codes"><pre class="brush: clojure">(defn draw-entities
-  [context dims level entity-list color]
+  [context dims level entity-list color zoom]
   (let [{r :r g :g b :b} color
         color-str (str &quot;rgb(&quot; r &quot;,&quot; g &quot;,&quot; b &quot;)&quot;)]
+    (.save context)
+    (if (zero? zoom)
+      (.scale context 0.00001 0.0001)
+      (.scale context zoom zoom))
     (doseq [entity entity-list]
       (.beginPath context)
       (set! (. context -strokeStyle) color-str)
@@ -4104,24 +4397,67 @@ level functions to draw complete game entities using the primitives.</p>
                          true
                          (:flip-point entity)
                          (:flip-cur-angle entity))
-      (.closePath context))))</pre></td></tr><tr><td class="docs"><p>Draws a level on a 2D context of an HTML5 canvas with :height and :width
+      (.closePath context))
+    (.restore context)))</pre></td></tr><tr><td class="docs">
+</td><td class="codes"><pre class="brush: clojure">(defn draw-spike
+  [{:keys [dims context level]} seg-idx length]
+  (.beginPath context)
+  (set! (. context -strokeStyle) (str &quot;rgb(10, 150, 10)&quot;))
+  (draw-line context
+              (path/polar-to-cartesian-centered
+               (path/segment-midpoint level seg-idx false) dims)
+              (path/polar-to-cartesian-centered
+               (path/polar-segment-midpoint level seg-idx length) dims))
+  (.closePath context))</pre></td></tr><tr><td class="docs">
+</td><td class="codes"><pre class="brush: clojure">(defn draw-all-spikes
+  [game-state]
+  (let [context (:context game-state) zoom (:zoom game-state)
+        spikes (:spikes game-state) spike-count (count spikes)]
+    (.save context)
+    (if (zero? zoom)
+      (.scale context 0.00001 0.0001)
+      (.scale context zoom zoom))
+    (doseq [idx (range spike-count)]
+      (let [length (nth spikes idx)] 
+        (if (pos? length)
+          (draw-spike game-state idx length))))
+    (.restore context)))</pre></td></tr><tr><td class="docs"><p>(for [idx (range spike-count)
+                 spike (nth spikes idx)
+                 :when (pos? spike)] 
+ #(draw-spike game-state idx spike))</p>
+</td><td class="codes"></td></tr><tr><td class="docs"><p>Draws just the segment of the board that the player is on, with the given
+   color.</p>
+</td><td class="codes"><pre class="brush: clojure">(defn draw-player-segment
+  [{:keys [dims level zoom player] context :bgcontext {pseg :segment} :player}
+   {:keys [r g b]}]
+  (.beginPath context)
+  (set! (. context -strokeStyle) (str &quot;rgb(&quot; r &quot;,&quot; g &quot;,&quot; b &quot;)&quot;))
+  (draw-rectangle
+   context
+   (path/round-path (path/rectangle-to-canvas-coords
+                     dims
+                     (path/rectangle-for-segment level pseg))))
+  (.closePath context))</pre></td></tr><tr><td class="docs"><p>Draws a level on a 2D context of an HTML5 canvas with :height and :width
    specified in dims.</p>
 </td><td class="codes"><pre class="brush: clojure">(defn draw-board
-  [context dims level zoom]
+  [{:keys [dims level zoom player] context :bgcontext}]
   (doseq []
     (.save context)
-    (.scale context zoom zoom)
-    (.beginPath context)
+    ;; To fix bug in Firefox.  scale to 0.0 breaks it.
+    (if (zero? zoom)
+      (.scale context 0.00001 0.0001)
+      (.scale context zoom zoom))
+    (set! (. context -lineWidth) 1)
     (set! (. context -strokeStyle) (str &quot;rgb(10,10,100)&quot;))
+    (.beginPath context)
     (doseq [idx (range (count (:segments level)))]
       (draw-rectangle
        context
        (path/round-path (path/rectangle-to-canvas-coords
                          dims
                          (path/rectangle-for-segment level idx)))))
-    (.closePath context)
-    (.restore context)))</pre></td></tr><tr><td class="docs"><p> (path/round-path (map #(list (+ (- (:width dims) (* (:width dims) zoom)) (first %)) (peek %)) (path/rectangle-to-canvas-coords dims (path/rectangle-for-segment level idx)))))</p>
-</td><td class="codes"></td></tr><tr><td class="docs"><p>Clears an HTML5 context</p>
+    (.restore context)
+    (.closePath context)))</pre></td></tr><tr><td class="docs"><p>Clears an HTML5 context</p>
 </td><td class="codes"><pre class="brush: clojure">(defn clear-context
   [context dims]
   (let [{width :width height :height} dims]
@@ -4310,43 +4646,72 @@ a list of angles.</p>
                                         135 45 90 135 45 90 135 45 90 135 45] 15 80)))</pre></td></tr><tr><td class="docs">
 </td><td class="codes"><pre class="brush: clojure">(def *level6_lines* (vec (oblong-level [135 45 90 135 45 90 135 45 90 135 45 90
                                         135 45 90 135 45 90 135 45 90 135 45] 11 57)))</pre></td></tr><tr><td class="docs">
-</td><td class="codes"><pre class="brush: clojure">(def *level7_lines* (vec (oblong-level [135 45 135 45] 15 3)))</pre></td></tr><tr><td class="docs"><p>Make a map that defines a level.  A level contains a vector of lines, a
+</td><td class="codes"><pre class="brush: clojure">(def *level7_lines* (vec (oblong-level [135 45 135 45] 15 3)))</pre></td></tr><tr><td class="docs"><p>Oblong level</p>
+</td><td class="codes"><pre class="brush: clojure">(def *level8_lines* (vec (oblong-level [135 105 90 33] 8 10)))</pre></td></tr><tr><td class="docs"><p>Oblong level, V shape</p>
+</td><td class="codes"><pre class="brush: clojure">(def *level9_lines* (vec (oblong-level [50 50 60 60 70] 15 60)))</pre></td></tr><tr><td class="docs"><p>Custom level, a 'V' in horizontal and vertical steps</p>
+</td><td class="codes"><pre class="brush: clojure">(def *level10_lines*
+  [[38 203]
+   [43 217]
+   [34 229]
+   [44 239]
+   [39 255]
+   [50 262]
+   [50 278]
+   [39 284]
+   [44 300]
+   [34 310]
+   [43 322]
+   [38 336]
+   ])</pre></td></tr><tr><td class="docs"><p>Make a map that defines a level.  A level contains a vector of lines, a
    vector of segments constructed of pairs of lines, and a length function.
    This function takes a vector of lines, and a boolean specifying whether
    the level is a closed loop, or open.</p>
 </td><td class="codes"><pre class="brush: clojure">(defn make-level-entry 
   [lines loops? enemy-count enemy-probability &amp;
-   {:keys [length-fn] :or {length-fn *default-length-fn*}}]
+   {:keys [length-fn steps] :or {length-fn *default-length-fn*
+                                 steps *default-steps-per-segment*}}]
   {:lines lines
    :loops? loops?
    :segments (build-segment-list (- (count lines) 1) loops?)
    :length-fn length-fn
-   :steps *default-steps-per-segment*
+   :steps steps
    :remaining enemy-count
    :probability enemy-probability})</pre></td></tr><tr><td class="docs">
 </td><td class="codes"><pre class="brush: clojure">(def *levels*
   [ (make-level-entry *level1_lines* false
-                      {:flipper 5}
-                      {:flipper 0.01})
+                      {:flipper 6 :tanker 0 :spiker 2}
+                      {:flipper 0.01 :tanker 0  :spiker 0.01})
     (make-level-entry *level2_lines* true
-                      {:flipper 20}
-                      {:flipper 0.01}
+                      {:flipper 20 :tanker 0 :spiker 3}
+                      {:flipper 0.01 :tanker 0 :spiker 0.005}
                       :length-fn #(* 9 %))
     (make-level-entry *level3_lines* false
-                      {:flipper 20}
-                      {:flipper 0.01})
+                      {:flipper 20 :tanker 5 :spiker 6}
+                      {:flipper 0.01 :tanker 0.005 :spiker 0.005})
     (make-level-entry *level4_lines* false
-                      {:flipper 20}
-                      {:flipper 0.01})
+                      {:flipper 20 :tanker 10 :spiker 6}
+                      {:flipper 0.01 :tanker 0.005 :spiker .005})
     (make-level-entry *level5_lines* false
-                      {:flipper 20}
-                      {:flipper 0.01})
+                      {:flipper 20 :tanker 10 :spiker 6}
+                      {:flipper 0.01 :tanker 0.005 :spiker .005})
     (make-level-entry *level6_lines* true
-                      {:flipper 20}
-                      {:flipper 0.01})
+                      {:flipper 20 :tanker 10 :spiker 6}
+                      {:flipper 0.01 :tanker 0.005 :spiker .005})
     (make-level-entry *level7_lines* false
-                      {:flipper 20}
-                      {:flipper 0.01})])</pre></td></tr><tr><td class="spacer docs">&nbsp;</td><td class="codes" /></tr><tr><td class="docs"><div class="docs-header"><a class="anchor" href="#tempest.path" name="tempest.path"><h1 class="project-name">tempest.path</h1><a class="toc-link" href="#toc">toc</a></a></div></td><td class="codes" /></tr><tr><td class="docs"><p>Functions related to path and coordinate creation and manipulation.</p>
+                      {:flipper 20 :tanker 10 :spiker 6}
+                      {:flipper 0.01 :tanker 0.005 :spiker .005})
+    (make-level-entry *level8_lines* false
+                      {:flipper 20 :tanker 10 :spiker 6}
+                      {:flipper 0.01 :tanker 0.005 :spiker .005}
+                      :length-fn #(* 10 %)
+                      :steps 400)
+    (make-level-entry *level9_lines* false
+                      {:flipper 20 :tanker 10 :spiker 6}
+                      {:flipper 0.01 :tanker 0.005 :spiker .005})
+    (make-level-entry *level10_lines* false
+                      {:flipper 20 :tanker 10 :spiker 6}
+                      {:flipper 0.01 :tanker 0.005 :spiker .005})
+    ])</pre></td></tr><tr><td class="spacer docs">&nbsp;</td><td class="codes" /></tr><tr><td class="docs"><div class="docs-header"><a class="anchor" href="#tempest.path" name="tempest.path"><h1 class="project-name">tempest.path</h1><a class="toc-link" href="#toc">toc</a></a></div></td><td class="codes" /></tr><tr><td class="docs"><p>Functions related to path and coordinate creation and manipulation.</p>
 
 <p>Functions in this module work with polar coordinates, cartesian coordinate,
 and 'paths' consisting of a sequence of coordinates.</p>
@@ -4617,14 +4982,43 @@ given level.</p>
   (let [coord (polar-entity-coord flipper)]
     (rotate-path
      (enemy-angle flipper)
-     (flipper-path-with-width (* 0.8 (entity-desired-width flipper))))))</pre></td></tr><tr><td class="docs"><p>Returns the path of polar coordinates to draw a projectile correctly at its
+     (flipper-path-with-width (* 0.8 (entity-desired-width flipper))))))</pre></td></tr><tr><td class="docs"><p>Returns the path of polar coordinates to draw a flipper correctly at its
+   current location.  It corrects for size and angle.</p>
+</td><td class="codes"><pre class="brush: clojure">(defn tanker-path-on-level
+  [tanker]
+  (let [coord (polar-entity-coord tanker)]
+    (rotate-path
+     (enemy-angle tanker)
+     (tanker-path-with-width (entity-desired-width tanker)))))</pre></td></tr><tr><td class="docs"><p>Returns the path of polar coordinates to draw a flipper correctly at its
+   current location.  It corrects for size and angle.</p>
+</td><td class="codes"><pre class="brush: clojure">(defn spiker-path-on-level
+  [entity]
+  (let [coord (polar-entity-coord entity)]
+    (rotate-path
+     (enemy-angle entity)
+     (spiker-path-with-width (entity-desired-width entity)))))</pre></td></tr><tr><td class="docs"><p>Returns the path of polar coordinates to draw a projectile correctly at its
    current location.  It corrects for size and angle.</p>
 </td><td class="codes"><pre class="brush: clojure">(defn projectile-path-on-level
   [projectile]
   (let [coord (polar-entity-coord projectile)]
     (rotate-path
      (enemy-angle projectile)
-     (projectile-path-with-width (* 0.3 (entity-desired-width projectile))))))</pre></td></tr><tr><td class="docs"><p>Returns a path to draw a 'flipper' enemy with given width.</p>
+     (projectile-path-with-width (* 0.3 (entity-desired-width projectile))))))</pre></td></tr><tr><td class="docs"><p>Returns a path to draw a 'tanker' enemy with given width.
+   Tanker is a diamond with an angular 'cat-eye' inside.</p>
+</td><td class="codes"><pre class="brush: clojure">(defn tanker-path-with-width
+  [width]
+  (let [r (* .55 (/ width (* 2 (js/Math.cos (util/deg-to-rad 45)))))
+        midheight (* .55 (* r (js/Math.sin (util/deg-to-rad 45))))
+        r2 (* .55 (/ (/ width 2) (* 2 (js/Math.cos (util/deg-to-rad 65)))))]
+    [[midheight 270]
+     [r 45]
+     [r 135]
+     [r 225]
+     [r 315]
+     [r2 65]
+     [r2 115]
+     [r2 245]
+     [r2 295]]))</pre></td></tr><tr><td class="docs"><p>Returns a path to draw a 'flipper' enemy with given width.</p>
 </td><td class="codes"><pre class="brush: clojure">(defn flipper-path-with-width
   [width]
   (let [r (/ width (js/Math.cos (util/deg-to-rad 16)))]
@@ -4635,7 +5029,27 @@ given level.</p>
      [r 164]
      [(/ r 4) 326]
      [(/ r 4) 214]
-     [(/ r 2) 16]]))</pre></td></tr><tr><td class="docs"><p>Returns a path to draw a projectile with the given width.</p>
+     [(/ r 2) 16]]))</pre></td></tr><tr><td class="docs"><p>Returns a path to draw a 'spiker' enemy with given width.</p>
+</td><td class="codes"><pre class="brush: clojure">(defn spiker-path-with-width
+  [width]
+  (let [r (util/round (/ width (js/Math.cos (util/deg-to-rad 16))))
+        r_14 (/ r 14) r_11 (/ r 11) r_8 (/ r 8) r_6 (/ r 6)
+        r_5 (/ r 5) r_4 (/ r 4)]
+    [[0 0]
+     [r_14 0]
+     [r_14 60]
+     [r_11 120]
+     [r_11 180]
+     [r_8  240]
+     [r_8  300]
+     [r_6  0]
+     [r_6  60]
+     [r_5  120]
+     [r_5  180]
+     [r_4  240]
+     [r_4  300]
+     [r_5  350]
+     [r_5  40]]))</pre></td></tr><tr><td class="docs"><p>Returns a path to draw a projectile with the given width.</p>
 </td><td class="codes"><pre class="brush: clojure">(defn player-path-with-width
   [width offset?]
   (let [r (/ (/ width 2) (js/Math.cos (util/deg-to-rad 16)))
