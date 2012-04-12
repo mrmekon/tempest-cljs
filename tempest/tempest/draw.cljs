@@ -96,9 +96,13 @@ level functions to draw complete game entities using the primitives.
   "Draws a player, defined by the given path 'player', on the 2D context of
    an HTML5 canvas, with :height and :width specified in dims, and on the
    given level."
-  [context dims level player]
+  [context dims level player zoom]
   (doseq []
+    (.save context)
     (.beginPath context)
+    (if (zero? zoom)
+      (.scale context 0.00001 0.0001)
+      (.scale context zoom zoom))
     (set! (. context -strokeStyle) (str "rgb(255,255,0)"))
     (draw-path context
                (path/polar-to-cartesian-centered
@@ -106,15 +110,20 @@ level functions to draw complete game entities using the primitives.
                 dims)
                (path/round-path (path/player-path-on-level player))
                true)
-    (.closePath context)))
+    (.closePath context)
+    (.restore context)))
 
 (defn draw-entities
   "Draws all the entities, defined by paths in 'entity-list', on the 2D context
    of an HTML5 canvas, with :height and :width specified in dims, and on the
    given level."
-  [context dims level entity-list color]
+  [context dims level entity-list color zoom]
   (let [{r :r g :g b :b} color
         color-str (str "rgb(" r "," g "," b ")")]
+    (.save context)
+    (if (zero? zoom)
+      (.scale context 0.00001 0.0001)
+      (.scale context zoom zoom))
     (doseq [entity entity-list]
       (.beginPath context)
       (set! (. context -strokeStyle) color-str)
@@ -126,7 +135,8 @@ level functions to draw complete game entities using the primitives.
                          true
                          (:flip-point entity)
                          (:flip-cur-angle entity))
-      (.closePath context))))
+      (.closePath context))
+    (.restore context)))
 
 (defn draw-spike
   [{:keys [dims context level]} seg-idx length]
@@ -141,11 +151,18 @@ level functions to draw complete game entities using the primitives.
 
 (defn draw-all-spikes
   [game-state]
-  (let [spikes (:spikes game-state) spike-count (count spikes)]
+  (let [context (:context game-state) zoom (:zoom game-state)
+        spikes (:spikes game-state) spike-count (count spikes)]
+    (.save context)
+    (if (zero? zoom)
+      (.scale context 0.00001 0.0001)
+      (.scale context zoom zoom))
     (doseq [idx (range spike-count)]
       (let [length (nth spikes idx)] 
         (if (pos? length)
-          (draw-spike game-state idx length))))))
+          (draw-spike game-state idx length))))
+    (.restore context)
+    ))
 
 ;;(for [idx (range spike-count)
 ;;                  spike (nth spikes idx)

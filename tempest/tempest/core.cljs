@@ -40,9 +40,40 @@ again by the browser sometime in the future with the update game-state
 after passing through all the other functions.  This implements the game loop.
 "
   [game-state]
-  (if (:is-zooming? game-state)
-    (game-logic-non-playable game-state)
-    (game-logic-playable game-state)))
+  (cond
+   (:paused? game-state) (game-logic-paused game-state)
+   (:player-zooming? game-state)
+   (game-logic-player-shooping-down-level game-state)
+   (and (:is-zooming? game-state))
+   (game-logic-non-playable game-state)
+   :else (game-logic-playable game-state)))
+
+(defn game-logic-paused
+  "Called by next-game-state when game is paused.  Just listens for keypress
+   to unpause game."
+  [game-state]
+  (->> game-state
+       dequeue-keypresses-while-paused
+       schedule-next-frame))
+
+(defn game-logic-player-shooping-down-level
+  "That's right, I named it that."
+  [game-state]
+  (->> game-state
+       clear-player-segment
+       dequeue-keypresses
+       highlight-player-segment
+       clear-frame
+       draw-board
+       render-frame       
+       remove-spiked-bullets
+       update-projectile-locations
+       animate-player-shooping
+       maybe-change-level
+       update-frame-count
+       maybe-render-fps-display                 
+       schedule-next-frame
+       ))
 
 (defn game-logic-playable
   "Called by next-game-state when game and player are active."
@@ -84,6 +115,7 @@ after passing through all the other functions.  This implements the game loop.
   "Called by next-game-state for non-playable animations."
   [game-state]
   (->> game-state
+       dequeue-keypresses-while-paused
        clear-frame
        draw-board
        render-frame
@@ -113,6 +145,7 @@ after passing through all the other functions.  This implements the game loop.
    :zoom-in? true
    :zoom 0.0
    :level-done? false
+   :player-zooming? false
    })
 
 (defn check-if-enemies-remain
@@ -126,8 +159,14 @@ after passing through all the other functions.  This implements the game loop.
         remaining (+ on-board unlaunched)]
     (if (zero? remaining)
       ;; TODO instead of clearing spikes, zoom down level
-      (assoc (clear-level-entities game-state)
-        :is-zooming? true :zoom-in? false)
+      ;;(assoc (clear-level-entities game-state) :is-zooming? true :zoom-in? false)
+      (do (.log js/console "player zooming")
+          (assoc game-state
+            :player (assoc player :stride -2)
+            :player-zooming? true
+            ;;:is-zooming? true
+            ;;:zoom-in? false
+            ))
       game-state)))
 
 (defn change-level
@@ -142,6 +181,8 @@ after passing through all the other functions.  This implements the game loop.
       :zoom-in? true
       :is-zooming? true
       :level-done? false
+      :player-zooming? false
+      :is-dead? false
       :projectile-list '()
       :enemy-list '()
       :spikes (vec (take (count (:segments level)) (repeat 0))))))
@@ -713,6 +754,27 @@ flipper appears to flip 'inside' the level:
     (assoc game-state
       :enemy-list (concat (map kill-tanker-at-top tankers) others))))
 
+(defn animate-player-shooping
+  "Updates the player's position as he travels ('shoops') down the level after
+   defeating all enemies.  Player moves relatively slowly.  Camera zooms in
+   (actually, level zooms out) a little slower than the player moves.  After
+   player reaches bottom, camera zooms faster.  Level marked as finished when
+   zoom level is very high (10x normal)."
+  [game-state]
+  (let [player (:player game-state)
+        level (:level game-state)
+        zoom (:zoom game-state)]
+    (cond
+     (:level-done? game-state) game-state
+     (>= zoom 10) (assoc game-state :level-done? true)
+     (zero? (:step player)) (assoc game-state :zoom (+ zoom .2))
+     :else (assoc game-state
+             :player (update-entity-position! player)
+             :zoom (+ 1 (/ (- (:steps level) (:step player)) 150))
+             :is-zooming? true
+             :zoom-in? false
+             ))))
+
 (defn animate-player-capture
   "Updates player's position on board while player is in the process of being
    captured by an enemy, and marks player as dead when he reaches the inner
@@ -727,7 +789,7 @@ flipper appears to flip 'inside' the level:
                        :player (assoc player :is-dead? true)
                        :is-zooming? true
                        :zoom-in? false)
-     :else  (assoc game-state :player (update-entity-position! player)))))
+     :else (assoc game-state :player (update-entity-position! player)))))
 
 (defn clear-level-entities
   "Clears enemies, projectiles, and spikes from level."
@@ -793,7 +855,9 @@ flipper appears to flip 'inside' the level:
         (draw/draw-board (assoc game-state
                            :dims {:width (/ width zoom)
                                   :height (/ height zoom)}))
-        (update-zoom game-state))
+        (if (:player-zooming? game-state)
+          game-state
+          (update-zoom game-state)))
         game-state)))
         
 
@@ -882,6 +946,29 @@ flipper appears to flip 'inside' the level:
     (.preventDefault event)
     (.stopPropagation event)))
 
+(defn dequeue-keypresses-while-paused
+  "See dequeue-keypresses for details.  This unqueues all keypresses, but only
+   responds to unpause."
+  [game-state]
+  (loop [state game-state
+         queue @*key-event-queue*]
+    (if (empty? queue)
+      state
+      (let [key (first queue)
+            valid? (compare-and-set! *key-event-queue* queue (rest queue))]
+        (if valid?
+          (recur (handle-keypress-unpause state key) @*key-event-queue*)
+          (recur state @*key-event-queue*))))))
+
+(defn handle-keypress-unpause
+  "See handle-keypress.  This version only accepts unpause."
+  [game-state key]
+  (let [paused? (:paused? game-state)]
+    (condp = key
+      key-codes/ESC (assoc game-state :paused? (not paused?))
+      game-state)))
+
+
 (defn handle-keypress
   "Returns new game state updated to reflect the results of a player's
    keypress.
@@ -907,9 +994,8 @@ flipper appears to flip 'inside' the level:
       key-codes/SPACE (assoc game-state
                         :projectile-list
                         (add-player-projectile projectile-list player))
-      key-codes/ESC (assoc game-state (not paused?))
-      game-state
-      )))
+      key-codes/ESC (assoc game-state :paused? (not paused?))
+      game-state)))
 
 (defn dequeue-keypresses
   "Atomically dequeue keypresses from global queue and pass to handle-keypress,
@@ -934,9 +1020,14 @@ again with the current deref of the global state.
       state
       (let [key (first queue)
             valid? (compare-and-set! *key-event-queue* queue (rest queue))]
-        (if (and valid? (not (:captured? (:player game-state))))
-          (recur (handle-keypress state key) @*key-event-queue*)
-          (recur state @*key-event-queue*))))))
+        (cond
+         (not valid?) (recur state @*key-event-queue*)
+         (not (:captured? (:player game-state))) (recur (handle-keypress
+                                                         state
+                                                         key)
+                                                        @*key-event-queue*)
+         :else (recur (handle-keypress-unpause state key) @*key-event-queue*)
+        )))))
 
 
 (defn animationFrameMethod
@@ -985,17 +1076,25 @@ The setTimeout fail-over is hard-coded to attempt 30fps.
          player :player}
         game-state
         {enemy-shots true player-shots false}
-        (group-by :from-enemy? projectile-list)]
-    (draw/draw-all-spikes game-state)
+        (group-by :from-enemy? projectile-list)
+        zoom (:zoom game-state)
+        zoom-dims {:width (/ (:width dims) zoom)
+                   :height (/ (:height dims) zoom)}]
+    (draw/draw-all-spikes (assoc game-state :dims zoom-dims))
     (if (not (:is-dead? player))
-      (draw/draw-player context dims level player))
-    (draw/draw-entities context dims level enemy-list {:r 150 :g 10 :b 10})
-    (draw/draw-entities context dims level
+      (draw/draw-player context zoom-dims level player (:zoom game-state)))
+    (draw/draw-entities context zoom-dims level
+                        enemy-list
+                        {:r 150 :g 10 :b 10}
+                        zoom)
+    (draw/draw-entities context zoom-dims level
                         player-shots
-                        {:r 255 :g 255 :b 255})
-    (draw/draw-entities context dims level
+                        {:r 255 :g 255 :b 255}
+                        zoom)
+    (draw/draw-entities context zoom-dims level
                         enemy-shots
-                        {:r 150 :g 15 :b 150})
+                        {:r 150 :g 15 :b 150}
+                        zoom)
     game-state))
 
 (defn remove-collided-entities
