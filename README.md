@@ -20,6 +20,8 @@ Game logic is written in ClojureScript, backend is in Clojure with the Noir fram
 
 ## Screenshots
 
+<img src="http://cloud.github.com/downloads/mrmekon/tempest-cljs/screenshot-stepped-v.png" />
+
 <img src="http://cloud.github.com/downloads/mrmekon/tempest-cljs/screenshot-action.png" />
 
 <img src="http://cloud.github.com/downloads/mrmekon/tempest-cljs/screenshot-round.png" />
