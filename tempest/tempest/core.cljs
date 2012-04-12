@@ -69,6 +69,7 @@ after passing through all the other functions.  This implements the game loop.
        remove-spiked-bullets
        update-projectile-locations
        animate-player-shooping
+       mark-player-if-spiked
        maybe-change-level
        update-frame-count
        maybe-render-fps-display                 
@@ -182,7 +183,6 @@ after passing through all the other functions.  This implements the game loop.
       :is-zooming? true
       :level-done? false
       :player-zooming? false
-      :is-dead? false
       :projectile-list '()
       :enemy-list '()
       :spikes (vec (take (count (:segments level)) (repeat 0))))))
@@ -754,6 +754,20 @@ flipper appears to flip 'inside' the level:
     (assoc game-state
       :enemy-list (concat (map kill-tanker-at-top tankers) others))))
 
+(defn mark-player-if-spiked
+  [game-state]
+  (let [{:keys [spikes player]} game-state step (:step player)
+        segment (:segment player) spike-len (nth spikes segment)]
+    (cond
+     (zero? spike-len) game-state
+     (<= step spike-len)
+     (assoc game-state
+       :player (assoc player :is-dead? true)
+       :is-zooming? true
+       :zoom-in? false
+       :player-zooming? false)
+     :else game-state)))
+
 (defn animate-player-shooping
   "Updates the player's position as he travels ('shoops') down the level after
    defeating all enemies.  Player moves relatively slowly.  Camera zooms in
@@ -1162,7 +1176,7 @@ The setTimeout fail-over is hard-coded to attempt 30fps.
   (let [{hit true missed false}
         (group-by #(<= (:step %) spike-len) projectile-list)]
     [missed (decrement-spike-length spike-len (count hit))]))
-
+    
 (defn remove-spiked-bullets
   [game-state]
   (let [projectile-list (:projectile-list game-state)
