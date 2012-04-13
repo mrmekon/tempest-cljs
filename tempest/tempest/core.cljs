@@ -140,9 +140,9 @@ is because the game's main loop logic changes based on a few possible states:
         gs3 (->> gs2
                  handle-spike-laying
                  maybe-make-enemy
+                 check-if-enemies-remain
                  check-if-player-captured
                  update-player-if-shot
-                 check-if-enemies-remain
                  update-entity-is-flipping
                  update-entity-flippyness
                  animate-player-capture
@@ -274,7 +274,7 @@ is because the game's main loop logic changes based on a few possible states:
 (defn build-enemy
   "Returns a dictionary describing an enemy on the given level and segment,
    and starting on the given step.  Step defaults to 0 (innermost step of
-   level) if not specified. TODO: Only makes flippers."
+   level) if not specified."
   [level seg-idx & {:keys [step] :or {step 0}}]
   {:step step
    :stride 1
@@ -809,6 +809,7 @@ flipper appears to flip 'inside' the level:
    level."
   [game-state]
   (let [{:keys [spikes player]} game-state step (:step player)
+        ;; TODO: (nth) caused an error here once, spikes was length 0.
         segment (:segment player) spike-len (nth spikes segment)]
     (cond
      (zero? spike-len) game-state
@@ -883,6 +884,7 @@ flipper appears to flip 'inside' the level:
         (if (cmp newzoom target)
           (assoc game-state :zoom target)
           (assoc game-state :zoom newzoom)))))
+
 
 (defn clear-player-segment
   "Returns game-state unchanged, and as a side affect clears the player's
@@ -1283,6 +1285,7 @@ The setTimeout fail-over is hard-coded to attempt 30fps.
       (assoc (clear-level-entities game-state)
         :player (assoc player :is-dead? true)
         :is-zooming? true
+        :player-zooming? false
         :zoom-in? false)
       game-state)))
 

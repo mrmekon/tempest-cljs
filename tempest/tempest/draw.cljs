@@ -21,11 +21,12 @@ level functions to draw complete game entities using the primitives.
 (defn draw-rectangle
   "Draws a rectangle (4 cartesian coordinates in a vector) on the 2D context
    of an HTML5 canvas."
-  [context [p0 & points]]
-  (.moveTo context (first p0) (peek p0))
-  (doseq [p points]
-    (.lineTo context (first p) (peek p)))
-  (.lineTo context (first p0) (peek p0))
+  [context [[x0 y0] [x1 y1] [x2 y2] [x3 y3]]]
+  (.moveTo context x0 y0)
+  (.lineTo context x1 y1)
+  (.lineTo context x2 y2)
+  (.lineTo context x3 y3)
+  (.lineTo context x0 y0)
   (.stroke context)
   )
 
