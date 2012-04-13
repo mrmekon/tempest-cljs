@@ -1,3 +1,10 @@
+;;
+;; This file is part of tempest-cljs
+;; Copyright (c) 2012, Trevor Bentley
+;; All rights reserved.
+;; See LICENSE file for details.
+;;
+
 (ns tempest.macros
   "Macros for Tempest, in separate namespace because of ClojureScript
    limitation."

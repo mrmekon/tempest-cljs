@@ -1,3 +1,10 @@
+;;
+;; This file is part of tempest-cljs
+;; Copyright (c) 2012, Trevor Bentley
+;; All rights reserved.
+;; See LICENSE file for details.
+;;
+
 (ns ^{:doc "
 Functions related to the game of tempest, and game state.
 
@@ -33,7 +40,7 @@ Enemy types:
             [clojure.browser.repl :as repl])
   (:require-macros [tempest.macros :as macros]))
 
-(repl/connect "http://localhost:9000/repl")
+;;(repl/connect "http://localhost:9000/repl")
 
 ;; ---
 

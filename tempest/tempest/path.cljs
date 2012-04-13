@@ -1,3 +1,10 @@
+;;
+;; This file is part of tempest-cljs
+;; Copyright (c) 2012, Trevor Bentley
+;; All rights reserved.
+;; See LICENSE file for details.
+;;
+
 (ns ^{:doc "
 Functions related to path and coordinate creation and manipulation.
 
