@@ -44,6 +44,26 @@ Enemy types:
 
 ;; ---
 
+
+(defn bind [target type handler]
+  (if (aget target "addEventListener")
+    (. target addEventListener type handler false)
+    (. target attachEvent (str "on" type) handler)))
+
+(defn keydown-handler [event]
+  (.log js/console (str "Got keydown event: " (. event -keyCode))))
+
+(defn keyup-handler [event]
+  (.log js/console (str "Got keyup event: " (. event -keyCode))))
+
+(defn bind-keyhandlers []
+  (do
+    (bind (dom/getWindow) "keydown" keydown-handler)
+    (bind (dom/getWindow) "keyup" keyup-handler)))
+
+(bind-keyhandlers)
+
+
 (defn next-game-state
   "**Main logic loop**
 
