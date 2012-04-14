@@ -284,8 +284,8 @@ given level."
 (defn scale-polar-coord
   "Return a polar coordinate with the first element (radius) scaled using
    the function scalefn"
-  [scalefn coord]
-  [(scalefn (first coord)) (peek coord)])
+  [scalefn [x y]]
+  [(scalefn x) y])
 
 (defn polar-extend
   "Add 'length' to radius of polar coordinate."
@@ -304,13 +304,13 @@ given level."
    To actually draw a level's line, you would move to the unscaled point
    without drawing, and then draw to the scaled point.
    "
-  [level seg-idx scaled?]
-  (let [[seg0 seg1] (get (:segments level) seg-idx)
-        line0 (get (:lines level) seg0)
-        line1 (get (:lines level) seg1)]
-    (if (true? scaled?)
-      [(scale-polar-coord (:length-fn level) line0)
-       (scale-polar-coord (:length-fn level) line1)]
+  [{:keys [segments lines length-fn]} seg-idx scaled?]
+  (let [[seg0 seg1] (get segments seg-idx)
+        line0 (get lines seg0)
+        line1 (get lines seg1)]
+    (if scaled?
+      [(scale-polar-coord length-fn line0)
+       (scale-polar-coord length-fn line1)]
       [line0 line1]
       )))
 
