@@ -647,8 +647,8 @@ flipper appears to flip 'inside' the level:
         max (max step0 step1)]
     (and
      (= damage-segment seg-idx)
-     (>= entity min)
-     (<= entity max))))
+     (>= step min)
+     (<= step max))))
 
 (defn projectiles-after-collision
   "Given an entity and a list of projectiles, returns the entity and updated
