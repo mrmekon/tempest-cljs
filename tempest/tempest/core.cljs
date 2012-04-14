@@ -610,7 +610,6 @@ flipper appears to flip 'inside' the level:
         (if (> newstep maxstep) maxstep
             newstep))))
 
-
 (defn update-entity-position!
   "Return entity updated with a new position based on its current location and
    stride.  Won't go lower than 0, or higher than the maximum steps of the
@@ -643,13 +642,13 @@ flipper appears to flip 'inside' the level:
 (defn entity-between-steps
   "Returns true of entity is on seg-idx, and between steps step0 and step1,
    inclusive."
-  [seg-idx step0 step1 entity]
+  [seg-idx step0 step1 {:keys [damage-segment step]}]
   (let [min (min step0 step1)
         max (max step0 step1)]
     (and
-     (= (:damage-segment entity) seg-idx)
-     (>= (:step entity) min)
-     (<= (:step entity) max))))
+     (= damage-segment seg-idx)
+     (>= entity min)
+     (<= entity max))))
 
 (defn projectiles-after-collision
   "Given an entity and a list of projectiles, returns the entity and updated
