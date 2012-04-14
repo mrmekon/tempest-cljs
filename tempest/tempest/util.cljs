@@ -23,3 +23,8 @@
   [num]
   (js* "~~" (+ 0.5 num)))
 
+(defn scale-polar-coord
+  "Return a polar coordinate with the first element (radius) scaled using
+   the function scalefn"
+  [scalefn [r theta]]
+  [(scalefn r) theta])

@@ -279,6 +279,21 @@ Functions related to generating paths representing levels.
    [38 336]
    ])
 
+(defn store-polar-lines-for-segments
+  "Stores the polar lines, both scaled (outer edge) and unscaled (inner edge)
+   in the level itself so it doesn't have to constantly be redetermined.  This
+   is basically memoization."
+  [{:keys [segments lines length-fn] :as level}]
+  (let [newlines (vec (map #(vector (get lines (first %))
+                                    (get lines (peek %))) segments))
+        scaled (vec (map #(vector (util/scale-polar-coord
+                                   length-fn (get lines (first %)))
+                                  (util/scale-polar-coord
+                                   length-fn (get lines (peek %)))) segments))]
+    (assoc level
+      :segment-lines newlines
+      :segment-lines-scaled scaled)))
+
 
 (defn make-level-entry 
   "Make a map that defines a level.  A level contains a vector of lines, a
@@ -288,13 +303,14 @@ Functions related to generating paths representing levels.
   [lines loops? enemy-count enemy-probability &
    {:keys [length-fn steps] :or {length-fn *default-length-fn*
                                  steps *default-steps-per-segment*}}]
-  {:lines lines
-   :loops? loops?
-   :segments (build-segment-list (- (count lines) 1) loops?)
-   :length-fn length-fn
-   :steps steps
-   :remaining enemy-count
-   :probability enemy-probability})
+  (store-polar-lines-for-segments
+   {:lines lines
+    :loops? loops?
+    :segments (build-segment-list (- (count lines) 1) loops?)
+    :length-fn length-fn
+    :steps steps
+    :remaining enemy-count
+    :probability enemy-probability}))
 
 (def *levels*
   [ (make-level-entry *level1_lines* false

@@ -210,7 +210,7 @@ given level."
 
 (defn step-length-for-level-line
   [level line]
-  (let [longline (scale-polar-coord (:length-fn level) line)]
+  (let [longline (util/scale-polar-coord (:length-fn level) line)]
     (step-length-line level line longline)))
 
 (defn step-lengths-for-segment-lines
@@ -281,17 +281,12 @@ given level."
          (polar-lines-for-segment level seg-idx scaled?)))
 
 
-(defn scale-polar-coord
-  "Return a polar coordinate with the first element (radius) scaled using
-   the function scalefn"
-  [scalefn [x y]]
-  [(scalefn x) y])
-
 (defn polar-extend
   "Add 'length' to radius of polar coordinate."
   [length coord]
   [(+ length (first coord))
    (peek coord)])
+
 
 (defn polar-lines-for-segment
   "Returns vector [line0 line1], where lineN is a polar coordinate describing
@@ -304,15 +299,11 @@ given level."
    To actually draw a level's line, you would move to the unscaled point
    without drawing, and then draw to the scaled point.
    "
-  [{:keys [segments lines length-fn]} seg-idx scaled?]
-  (let [[seg0 seg1] (get segments seg-idx)
-        line0 (get lines seg0)
-        line1 (get lines seg1)]
-    (if scaled?
-      [(scale-polar-coord length-fn line0)
-       (scale-polar-coord length-fn line1)]
-      [line0 line1]
-      )))
+  [{:keys [segment-lines segment-lines-scaled]} seg-idx scaled?]
+  (if scaled?
+    (vec (nth segment-lines-scaled seg-idx))
+    (vec (nth segment-lines seg-idx))))
+
 
 ;; Path that defines player.
 (def ^{:doc "Path, in polar coordinates, describing the player's ship."}
