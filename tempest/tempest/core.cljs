@@ -213,22 +213,39 @@ is because the game's main loop logic changes based on a few possible states:
         :player-zooming? true)
       game-state)))
 
+(defn cache-level-rectangles
+  "Cache the rectangles, four cartesian coordinates, of each segment of
+   the level when drawn at 1.0 zoom.  Caching this speeds up drawing the
+   board a little bit, but mostly improves performance of drawing the
+   highlighted player segment."
+  [{{segments :segments :as level} :level dims :dims :as game-state}]
+  (let [recs (into []
+                   (map #(into []
+                               (path/round-path
+                                (path/rectangle-to-canvas-coords
+                                 dims
+                                 (path/rectangle-for-segment level %))))
+                        (range (count segments))))]
+    (assoc game-state
+      :level (assoc level :rectangles recs))))
+
 (defn change-level
   "Changes current level of game."
   [game-state level-idx]
   (let [level (get levels/*levels* level-idx)]
-    (assoc game-state
-      :level-idx level-idx
-      :level level
-      :player (build-player level 0)
-      :zoom 0.0
-      :zoom-in? true
-      :is-zooming? true
-      :level-done? false
-      :player-zooming? false
-      :projectile-list '()
-      :enemy-list '()
-      :spikes (vec (take (count (:segments level)) (repeat 0))))))
+    (cache-level-rectangles
+     (assoc game-state
+       :level-idx level-idx
+       :level level
+       :player (build-player level 0)
+       :zoom 0.0
+       :zoom-in? true
+       :is-zooming? true
+       :level-done? false
+       :player-zooming? false
+       :projectile-list '()
+       :enemy-list '()
+       :spikes (vec (take (count (:segments level)) (repeat 0)))))))
 
 (defn maybe-change-level
   "Reloads or moves to the next level if player is dead, or if all enemies are

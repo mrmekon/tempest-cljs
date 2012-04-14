@@ -172,30 +172,29 @@ level functions to draw complete game entities using the primitives.
     (.restore context)
     ))
 
-;;(for [idx (range spike-count)
-;;                  spike (nth spikes idx)
-;;                  :when (pos? spike)] 
-;;  #(draw-spike game-state idx spike))
-
 (defn draw-player-segment
   "Draws just the segment of the board that the player is on, with the given
    color."
-  [{:keys [dims level zoom player] context :bgcontext {pseg :segment} :player}
+  [{:keys [dims zoom player] context :bgcontext {pseg :segment} :player
+    {recs :rectangles :as level} :level}
    {:keys [r g b]}]
   (.beginPath context)
   (set! (. context -strokeStyle) (str "rgb(" r "," g "," b ")"))
-  (draw-rectangle
-   context
-   (path/round-path (path/rectangle-to-canvas-coords
-                     dims
-                     (path/rectangle-for-segment level pseg))))
+  (if (= zoom 1.0)
+    (draw-rectangle context (nth recs pseg))
+    (draw-rectangle
+     context
+     (path/round-path (path/rectangle-to-canvas-coords
+                       dims
+                       (path/rectangle-for-segment level pseg)))))
   (.closePath context))
   
 
 (defn draw-board
   "Draws a level on a 2D context of an HTML5 canvas with :height and :width
    specified in dims."
-  [{:keys [dims level zoom player] context :bgcontext}]
+  [{:keys [dims zoom player] context :bgcontext
+    {recs :rectangles :as level} :level}]
   (doseq []
     (.save context)
     ;; To fix bug in Firefox.  scale to 0.0 breaks it.
@@ -206,11 +205,13 @@ level functions to draw complete game entities using the primitives.
     (set! (. context -strokeStyle) (str "rgb(10,10,100)"))
     (.beginPath context)
     (doseq [idx (range (count (:segments level)))]
-      (draw-rectangle
-       context
-       (path/round-path (path/rectangle-to-canvas-coords
-                         dims
-                         (path/rectangle-for-segment level idx)))))
+      (if (= zoom 1.0)
+        (draw-rectangle context (nth recs idx))
+        (draw-rectangle
+         context
+         (path/round-path (path/rectangle-to-canvas-coords
+                           dims
+                           (path/rectangle-for-segment level idx))))))
     (.restore context)
     (.closePath context)
     ))
