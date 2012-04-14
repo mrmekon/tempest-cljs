@@ -604,14 +604,12 @@ flipper appears to flip 'inside' the level:
 (defn entity-next-step
   "Returns the next step position of given entity, taking into account
    minimum and maximum positions of the level."
-  [entity]
-  (let [stride (:stride entity)
-        maxstep (:steps (:level entity))
-        newstep (+ stride (:step entity))]
-    (cond
-     (> newstep maxstep) maxstep
-     (< newstep 0) 0
-     :else newstep)))
+  [{:keys [stride step] {maxstep :steps} :level}]
+  (let [newstep (+ stride step)]
+    (if (neg? newstep) 0
+        (if (> newstep maxstep) maxstep
+            newstep))))
+
 
 (defn update-entity-position!
   "Return entity updated with a new position based on its current location and
