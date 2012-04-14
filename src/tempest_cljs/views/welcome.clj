@@ -32,3 +32,33 @@
    (javascript-tag (str "tempest.canvasDraw(" (pr-str level) ");"))
    ))
 
+(defpage "/benchmark/:number" {:keys [number]}
+  (common/site-layout
+   (include-js "/analytics.js")
+   (include-js "/tempest.js")
+   [:div#links {:style "color: #FFFFFF; position: absolute; z-index: 2;"}
+    (link-to {:style (str "color: #FFFFFF; position:absolute;"
+                          "width:200px; text-decoration: none;"
+                          "border-bottom: 1px dotted;")}
+             "https://github.com/mrmekon/tempest-cljs/"
+             "tempest-cljs on github")
+    (link-to {:style (str "color: #FFFFFF; position: absolute;"
+                          "left: 201px; width: 100px; text-decoration: none;"
+                          "border-bottom: 1px dotted;")}
+             "http://www.trevorbentley.com"
+             "trevor bentley")]
+   [:canvas#canv-bg {:width "1000" :height "700"
+                     :style (str "position: absolute; z-index: 0;"
+                                 "background-color: #000000;")}]
+   [:canvas#canv-fg {:width "1000" :height "700"
+                     :style (str "position: absolute; z-index: 1;")}]
+   [:p#fps {:style "color: #FFFFFF; position: absolute; top: 690px"} "FPS 0.0"]
+   (condp = (Integer/parseInt number)
+     0 (javascript-tag (str "tempest.benchmarkFlippers();"))
+     1 (javascript-tag (str "tempest.benchmarkSpikers();"))
+     2 (javascript-tag (str "tempest.benchmarkProjectiles();"))
+     3 (javascript-tag (str "tempest.benchmarkFlippersNoFlip();"))
+     [:h1 {:style "color: #FFFFFF; position: absolute; "}
+      "Invalid benchmark specified!"]
+   )))
+

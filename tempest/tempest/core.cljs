@@ -269,7 +269,7 @@ is because the game's main loop logic changes based on a few possible states:
 (defn direction-string-from-value
   "Given a value from DirectionEnum, return the corresponding string."
   [val]
-  (first (first (filter #(= 1 (peek %)) (into [] maptest)))))
+  (first (first (filter #(= val (peek %)) (into [] DirectionEnum)))))
 
 (defn build-enemy
   "Returns a dictionary describing an enemy on the given level and segment,

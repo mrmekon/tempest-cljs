@@ -12,6 +12,7 @@ Publicly exported functions to embed Tempest game in HTML.
   (:require [tempest.levels :as levels]
             [tempest.draw :as draw]
             [tempest.core :as c]
+            [tempest.benchmarks :as bench]
             [goog.dom :as dom]
             [goog.events :as events]
             [goog.events.KeyHandler :as key-handler]))
@@ -62,10 +63,28 @@ Publicly exported functions to embed Tempest game in HTML.
 ;;   * Frame timing, and disassociate movement speed from framerate.
 ;;
 
-(defn enemy-on-each-segment
+(defn flipper-on-each-segment
   "List of enemies, one per segment."
   [level]
-  (map #(c/build-flipper level % :step 0)
+  (map #(assoc (c/build-flipper level % :step 0) :flip-probability 1)
+       (range (count (:segments level)))))
+
+(defn flipper-on-each-segment-noflip
+  "List of enemies, one per segment."
+  [level]
+  (map #(assoc (c/build-flipper level % :step 0) :flip-probability 0)
+       (range (count (:segments level)))))
+
+(defn spiker-on-each-segment
+  "List of enemies, one per segment."
+  [level]
+  (map #(assoc (c/build-spiker level % :step 0) :max-step (:steps level))
+       (range (count (:segments level)))))
+
+(defn projectile-on-each-segment
+  "List of projectiles, one per segment."
+  [level stride]
+  (map #(c/build-projectile level % stride :step (:steps level))
        (range (count (:segments level)))))
 
 (defn ^:export canvasDraw
@@ -89,9 +108,45 @@ Publicly exported functions to embed Tempest game in HTML.
                         :context context
                         :bgcontext bgcontext
                         :dims dims
-                        :anim-fn (c/animationFrameMethod)
-                        :enemy-list )
+                        :anim-fn (c/animationFrameMethod))
                       level-idx)]
       (c/next-game-state game-state))))
 
+
+
+(defn ^:export benchmarkFlippers []
+  (let [level (get levels/*levels* 0)]
+    (bench/benchmarkTempest
+     (apply concat
+            (take 5
+                  (repeatedly
+                   #(flipper-on-each-segment level))))
+     '())))
+
+(defn ^:export benchmarkFlippersNoFlip []
+  (let [level (get levels/*levels* 0)]
+    (bench/benchmarkTempest
+     (apply concat
+            (take 5
+                  (repeatedly
+                   #(flipper-on-each-segment-noflip level))))
+     '())))
+
+(defn ^:export benchmarkSpikers []
+  (let [level (get levels/*levels* 0)]
+    (bench/benchmarkTempest
+     (apply concat
+            (take 10
+                  (repeatedly
+                   #(spiker-on-each-segment level))))
+     '())))
+
+(defn ^:export benchmarkProjectiles []
+  (let [level (get levels/*levels* 0)]
+    (bench/benchmarkTempest
+      (apply concat
+             (take 8
+                   (repeatedly
+                    #(spiker-on-each-segment level))))
+      (flatten (map #(projectile-on-each-segment level %) (range -1 -9 -1))))))
 
